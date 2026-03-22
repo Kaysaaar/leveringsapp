@@ -7,6 +7,7 @@
   <link rel="manifest" href="./manifest.json">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <style>
     :root{
       --bg1:#17352d;
@@ -44,7 +45,7 @@
       margin:0 auto;
       height:100vh;
       padding:
-        calc(12px + env(safe-area-inset-top))
+        calc(28px + env(safe-area-inset-top))
         12px
         calc(18px + env(safe-area-inset-bottom))
         12px;
@@ -572,7 +573,7 @@
     @media (max-width:380px){
       .app{
         padding:
-          calc(10px + env(safe-area-inset-top))
+          calc(24px + env(safe-area-inset-top))
           10px
           calc(16px + env(safe-area-inset-bottom))
           10px;
