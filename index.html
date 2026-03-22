@@ -90,14 +90,6 @@
       letter-spacing:.2px;
     }
 
-    .order-label{
-      text-align:center;
-      font-size:clamp(18px, 4.2vw, 24px);
-      font-weight:700;
-      margin:0 0 10px;
-      word-break:break-word;
-    }
-
     .btn{
       width:100%;
       border:none;
@@ -1246,7 +1238,7 @@
           } else if (msg.toLowerCase().includes('abort')) {
             setStatus('orderStatus', 'Scanning tog for lang tid — indtast manuelt.', 'error');
           } else {
-            setStatus('orderStatus', 'Kunne ikke finde ordrenummer — prøv igen eller indtast manuelt.', 'error');
+            setStatus('orderStatus', 'Kunde ikke finde ordrenummer — prøv igen eller indtast manuelt.', 'error');
           }
         }
       } finally {
