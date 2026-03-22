@@ -1,9 +1,11 @@
-const CACHE_NAME = 'leveringsapp-v2';
+const CACHE_NAME = 'leveringsapp-v3';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
-  './wallmann-logo.png'
+  './wallmann-logo.png',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 self.addEventListener('install', event => {
