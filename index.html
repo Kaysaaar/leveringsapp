@@ -1,0 +1,1657 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Leveringsapp</title>
+  <style>
+    :root{
+      --bg1:#17352d;
+      --bg2:#203b33;
+      --white:#f5f7f6;
+      --dark:#1f382f;
+      --shadow:0 10px 28px rgba(0,0,0,0.18);
+    }
+
+    *{
+      box-sizing:border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body{
+      margin:0;
+      padding:0;
+      width:100%;
+      min-height:100%;
+      font-family: Arial, Helvetica, sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(255,255,255,0.06), transparent 30%),
+        linear-gradient(90deg, var(--bg1), var(--bg2));
+      color:var(--white);
+      overflow:hidden;
+    }
+
+    body{
+      min-height:100vh;
+    }
+
+    .app{
+      width:100%;
+      max-width:430px;
+      margin:0 auto;
+      height:100vh;
+      padding:
+        calc(12px + env(safe-area-inset-top))
+        12px
+        calc(18px + env(safe-area-inset-bottom))
+        12px;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+    }
+
+    .screen{
+      display:none;
+      height:100%;
+      animation:fadeIn .18s ease;
+      overflow:hidden;
+    }
+
+    .screen.active{
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+
+    .screen.top-aligned.active{
+      justify-content:flex-start;
+    }
+
+    @keyframes fadeIn{
+      from{opacity:0; transform:translateY(6px);}
+      to{opacity:1; transform:translateY(0);}
+    }
+
+    .spacer-6{height:6px;}
+    .spacer-8{height:8px;}
+    .spacer-10{height:10px;}
+    .spacer-12{height:12px;}
+    .spacer-16{height:16px;}
+    .spacer-20{height:20px;}
+    .spacer-24{height:24px;}
+    .spacer-30{height:30px;}
+
+    .small-label{
+      font-size:13px;
+      font-weight:600;
+      text-align:center;
+      opacity:.82;
+      margin:8px 0 6px;
+      letter-spacing:.2px;
+    }
+
+    .order-label{
+      text-align:center;
+      font-size:clamp(18px, 4.2vw, 24px);
+      font-weight:700;
+      margin:0 0 10px;
+      word-break:break-word;
+    }
+
+    .btn{
+      width:100%;
+      border:none;
+      border-radius:16px;
+      padding:13px 14px;
+      background:var(--white);
+      color:var(--dark);
+      font-size:clamp(18px, 4.2vw, 23px);
+      font-weight:700;
+      cursor:pointer;
+      box-shadow:var(--shadow);
+      transition:transform .12s ease, opacity .15s ease;
+      text-decoration:none;
+    }
+
+    .btn:active{
+      transform:scale(0.98);
+    }
+
+    .btn.small{
+      width:auto;
+      min-width:90px;
+      padding:12px 12px;
+      font-size:clamp(15px, 3.6vw, 18px);
+    }
+
+    .btn.secondary{
+      background:rgba(255,255,255,0.92);
+    }
+
+    .btn.primary{
+      background:var(--white);
+    }
+
+    .btn[disabled]{
+      opacity:.55;
+      cursor:not-allowed;
+      transform:none !important;
+    }
+
+    .btn-row{
+      display:flex;
+      gap:10px;
+      justify-content:space-between;
+      align-items:center;
+      margin-top:10px;
+      flex-wrap:nowrap;
+    }
+
+    .btn-row .btn.small{
+      flex:1 1 0;
+    }
+
+    .home-logo-wrap{
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      align-items:center;
+      margin-bottom:28px;
+      text-align:center;
+    }
+
+    .home-logo{
+      width:100%;
+      max-width:180px;
+      height:auto;
+      display:block;
+      object-fit:contain;
+      margin:0 auto;
+    }
+
+    .home-logo-subtitle{
+      margin-top:10px;
+      font-size:18px;
+      font-weight:700;
+      letter-spacing:.3px;
+      color:rgba(255,255,255,0.92);
+      text-align:center;
+    }
+
+    #screen-home.active{
+      justify-content:center;
+    }
+
+    .dropdown,
+    .manual-input,
+    .receiver-input{
+      width:100%;
+      border:none;
+      border-radius:16px;
+      background:rgba(255,255,255,0.96);
+      color:var(--dark);
+      padding:13px 14px;
+      text-align:center;
+      font-size:clamp(18px, 4.2vw, 23px);
+      font-weight:700;
+      outline:none;
+      box-shadow:var(--shadow);
+    }
+
+    .dropdown{
+      appearance:none;
+      -webkit-appearance:none;
+      background-image:
+        linear-gradient(45deg, transparent 50%, #52675f 50%),
+        linear-gradient(135deg, #52675f 50%, transparent 50%);
+      background-position:
+        calc(100% - 22px) calc(50% - 3px),
+        calc(100% - 16px) calc(50% - 3px);
+      background-size:6px 6px, 6px 6px;
+      background-repeat:no-repeat;
+      padding-right:34px;
+      padding-left:34px;
+      text-align:center;
+      text-align-last:center;
+      -webkit-text-align-last:center;
+    }
+
+    .dropdown:invalid{
+      color:#7d8f88;
+      font-weight:600;
+    }
+
+    .photo-box,
+    .signature-box{
+      width:100%;
+      overflow:hidden;
+      position:relative;
+      margin:10px 0;
+      background:rgba(7,10,10,0.88);
+      border:1px solid rgba(255,255,255,0.09);
+      box-shadow:var(--shadow);
+      border-radius:16px;
+    }
+
+    .photo-box{
+      min-height:220px;
+      max-height:30vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      flex:0 0 auto;
+    }
+
+    .photo-placeholder{
+      color:rgba(202,219,213,0.35);
+      font-size:clamp(18px, 5vw, 26px);
+      font-weight:700;
+      text-align:center;
+      padding:20px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      width:100%;
+      min-height:220px;
+    }
+
+    .preview-image{
+      width:100%;
+      height:auto;
+      max-height:30vh;
+      object-fit:contain;
+      display:none;
+      background:#111;
+    }
+
+    .thumb-row{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      margin:6px 0 8px;
+    }
+
+    .thumb{
+      width:18%;
+      aspect-ratio:3/4;
+      min-height:58px;
+      background:rgba(255,255,255,0.08);
+      border:1px solid rgba(255,255,255,0.12);
+      color:rgba(255,255,255,0.70);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      font-size:clamp(10px, 2.2vw, 12px);
+      font-weight:700;
+      overflow:hidden;
+      border-radius:10px;
+      padding:3px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      cursor:pointer;
+      transition:transform .12s ease;
+    }
+
+    .thumb:active{
+      transform:scale(0.98);
+    }
+
+    .thumb.selected{
+      outline:2px solid rgba(255,255,255,0.95);
+      outline-offset:1px;
+    }
+
+    .thumb img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+      border-radius:7px;
+    }
+
+    .signature-box{
+      height:min(34vh, 280px);
+      background:#efefef;
+      border-radius:16px;
+      border:1px solid #d0d0d0;
+      margin-top:8px;
+    }
+
+    .barcode-preview{
+      margin-top:10px;
+      padding:12px 12px;
+      border-radius:14px;
+      background:rgba(255,255,255,0.12);
+      border:1px solid rgba(255,255,255,0.12);
+      text-align:center;
+      box-shadow:var(--shadow);
+    }
+
+    .barcode-title{
+      font-size:14px;
+      opacity:.82;
+      margin-bottom:4px;
+      font-weight:600;
+    }
+
+    .barcode-number{
+      font-size:clamp(22px, 5.2vw, 30px);
+      font-weight:700;
+      letter-spacing:.3px;
+      word-break:break-word;
+    }
+
+    .order-list-card{
+      width:100%;
+      margin:8px 0 8px;
+      padding:10px 12px;
+      border-radius:14px;
+      background:rgba(255,255,255,0.12);
+      border:1px solid rgba(255,255,255,0.14);
+      box-shadow:var(--shadow);
+      min-height:54px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+
+    .order-list-grid{
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      justify-content:center;
+      align-items:center;
+    }
+
+    .order-pill{
+      background:rgba(255,255,255,0.14);
+      border:1px solid rgba(255,255,255,0.18);
+      border-radius:999px;
+      padding:6px 10px;
+      font-size:16px;
+      font-weight:700;
+      line-height:1;
+      color:var(--white);
+      min-width:78px;
+      text-align:center;
+    }
+
+    .order-screen-content{
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      flex:1 1 auto;
+      gap:8px;
+      overflow:hidden;
+    }
+
+    .camera-screen-content{
+      display:flex;
+      flex-direction:column;
+      flex:1 1 auto;
+      overflow:auto;
+      padding-bottom:12px;
+    }
+
+    .signature-content{
+      display:flex;
+      flex-direction:column;
+      flex:1 1 auto;
+      overflow:auto;
+      padding-bottom:8px;
+    }
+
+    canvas{
+      width:100%;
+      height:100%;
+      display:block;
+      touch-action:none;
+      background:#efefef;
+    }
+
+    .check-wrap{
+      min-height:calc(100vh - 40px);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+    }
+
+    .check{
+      font-size:clamp(84px, 22vw, 132px);
+      line-height:1;
+      margin-bottom:10px;
+      animation:popIn .22s ease;
+    }
+
+    @keyframes popIn{
+      from{transform:scale(.88); opacity:0;}
+      to{transform:scale(1); opacity:1;}
+    }
+
+    .registered{
+      font-size:clamp(30px, 8vw, 46px);
+      font-weight:700;
+      letter-spacing:.3px;
+    }
+
+    .status{
+      text-align:center;
+      font-size:14px;
+      opacity:.97;
+      min-height:18px;
+      margin-top:4px;
+      font-weight:600;
+    }
+
+    .status.ok{ color:#d9f3e2; }
+    .status.error{ color:#ffd4d4; }
+
+    .save-overlay{
+      position:fixed;
+      inset:0;
+      background:rgba(8,12,12,0.45);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:9999;
+      padding:24px;
+    }
+
+    .save-overlay.active{
+      display:flex;
+    }
+
+    .save-card{
+      width:100%;
+      max-width:320px;
+      background:rgba(255,255,255,0.96);
+      color:var(--dark);
+      border-radius:24px;
+      padding:26px 22px;
+      text-align:center;
+      box-shadow:0 18px 40px rgba(0,0,0,0.25);
+    }
+
+    .spinner{
+      width:42px;
+      height:42px;
+      border:4px solid rgba(32,55,47,0.18);
+      border-top-color:var(--dark);
+      border-radius:50%;
+      margin:0 auto 16px;
+      animation:spin .8s linear infinite;
+    }
+
+    @keyframes spin{
+      to{transform:rotate(360deg);}
+    }
+
+    .save-title{
+      font-size:24px;
+      font-weight:700;
+      margin-bottom:6px;
+    }
+
+    .save-text{
+      font-size:15px;
+      opacity:.8;
+    }
+
+    .camera-input-hidden{
+      position:absolute;
+      left:-9999px;
+      width:1px;
+      height:1px;
+      opacity:0;
+      pointer-events:none;
+    }
+
+    .pending-banner{
+      margin-top:14px;
+      padding:12px 14px;
+      border-radius:14px;
+      background:rgba(255,255,255,0.12);
+      border:1px solid rgba(255,255,255,0.14);
+      text-align:center;
+      font-size:14px;
+      font-weight:700;
+      box-shadow:var(--shadow);
+      cursor:pointer;
+      transition:transform .12s ease;
+    }
+
+    .pending-banner:active{
+      transform:scale(0.98);
+    }
+
+    .offline-note{
+      margin-top:10px;
+      padding:14px 16px;
+      border-radius:16px;
+      background:rgba(255,255,255,0.18);
+      border:1px solid rgba(255,255,255,0.22);
+      text-align:center;
+      font-size:15px;
+      line-height:1.35;
+      font-weight:700;
+      box-shadow:var(--shadow);
+    }
+
+    .hidden{
+      display:none !important;
+    }
+
+    .camera-main-btn{
+      width:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:clamp(20px, 4.4vw, 24px);
+      line-height:1;
+      padding:16px 16px;
+    }
+
+    .action-row-bottom{
+      margin-top:0;
+    }
+
+    .save-btn{
+      background:rgba(255,255,255,0.82);
+      color:var(--dark);
+    }
+
+    .receiver-input{
+      margin-top:8px;
+      font-size:clamp(17px, 4vw, 21px);
+      font-weight:700;
+    }
+
+    @media (max-width:380px){
+      .app{
+        padding:
+          calc(10px + env(safe-area-inset-top))
+          10px
+          calc(16px + env(safe-area-inset-bottom))
+          10px;
+      }
+
+      .btn-row{
+        gap:8px;
+      }
+
+      .order-pill{
+        font-size:15px;
+        min-width:72px;
+      }
+
+      .photo-box{
+        min-height:200px;
+      }
+
+      .photo-placeholder{
+        min-height:200px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <section id="screen-home" class="screen active">
+      <div class="home-logo-wrap">
+        <img
+          class="home-logo"
+          src="https://lh3.googleusercontent.com/d/1Jhv_IXqs2ne5XX8FOv0AlCtB7ZUmTk7Q"
+          alt="Wallmann"
+        >
+        <div class="home-logo-subtitle">LeveringsApp</div>
+      </div>
+
+      <select id="driverSelect" class="dropdown" required>
+        <option value="" selected disabled hidden>Vælg chauffør</option>
+        <option>Brian</option>
+        <option>Chauffør</option>
+        <option>Erik</option>
+        <option>Henrik</option>
+        <option>Niels</option>
+        <option>Otto</option>
+        <option>Thomas M</option>
+        <option>Thomas O</option>
+      </select>
+
+      <div id="pendingBanner" class="pending-banner hidden" onclick="retryPendingDeliveries()">
+        0 levering(er) afventer sending
+      </div>
+
+      <div class="spacer-30"></div>
+
+      <button class="btn primary" onclick="goToOrder()">Ny levering</button>
+    </section>
+
+    <section id="screen-order" class="screen">
+      <div class="order-screen-content">
+
+        <button class="btn primary" onclick="openOrderScanner()">Scan ordrenummer</button>
+
+        <input
+          id="barcodeInput"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          class="camera-input-hidden"
+          onchange="handleOrderScanImage(event)"
+        >
+
+        <div class="small-label">eller indtast ordrenummer</div>
+
+        <input id="manualOrderInput" class="manual-input" placeholder="Indtast ordrenummer" inputmode="numeric">
+
+        <div id="orderStatus" class="status"></div>
+
+        <div id="barcodeFoundWrap" class="hidden">
+          <div class="barcode-preview">
+            <div class="barcode-title">Fundet</div>
+            <div id="barcodeFoundNo" class="barcode-number">-</div>
+          </div>
+        </div>
+
+        <div id="multiOrderListCard" class="order-list-card hidden">
+          <div id="multiOrderList" class="order-list-grid"></div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn small secondary" onclick="addCurrentOrder()">Tilføj ordre</button>
+          <button class="btn small secondary" onclick="removeLastOrder()">Slet sidste</button>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn small primary" onclick="goToCamera()">Videre</button>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn small secondary" onclick="goToHome()">Tilbage</button>
+        </div>
+
+      </div>
+    </section>
+
+    <section id="screen-camera" class="screen top-aligned">
+      <div class="camera-screen-content">
+
+        <div class="spacer-6"></div>
+
+        <div id="cameraOrderListCard" class="order-list-card hidden">
+          <div id="cameraOrderList" class="order-list-grid"></div>
+        </div>
+
+        <div class="thumb-row">
+          <div class="thumb" id="thumb1" onclick="selectPhoto(0)">1</div>
+          <div class="thumb" id="thumb2" onclick="selectPhoto(1)">2</div>
+          <div class="thumb" id="thumb3" onclick="selectPhoto(2)">3</div>
+          <div class="thumb" id="thumb4" onclick="selectPhoto(3)">4</div>
+          <div class="thumb" id="thumb5" onclick="selectPhoto(4)">5</div>
+        </div>
+
+        <div class="photo-box">
+          <div id="photoPlaceholder" class="photo-placeholder">Ingen billeder endnu</div>
+          <img id="photoPreview" class="preview-image" alt="Preview">
+        </div>
+
+        <input
+          id="photoInput"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          class="camera-input-hidden"
+          onchange="handlePhotoSelect(event)"
+        >
+
+        <div id="cameraStatus" class="status"></div>
+
+        <div id="offlineNote" class="offline-note hidden">
+          Du er vidst på Lars Tyndskids mark 😅 Bare rolig — leveringen er gemt på enheden og sendes, når appen har forbindelse igen.
+        </div>
+
+        <div class="btn-row">
+          <button class="btn small secondary" onclick="deleteSelectedPhoto()">Slet billede</button>
+          <button class="btn small secondary" onclick="goToSignature()">Kvittering</button>
+        </div>
+
+        <div class="spacer-10"></div>
+
+        <label for="photoInput" class="btn primary camera-main-btn" aria-label="Tag billede">📷 Tag billede</label>
+
+        <div class="spacer-12"></div>
+
+        <div class="btn-row action-row-bottom">
+          <button class="btn small secondary" onclick="goToOrder()">Tilbage</button>
+          <button id="saveBtn" class="btn small save-btn" onclick="goToRegistered()">Gem levering</button>
+        </div>
+
+      </div>
+    </section>
+
+    <section id="screen-signature" class="screen top-aligned">
+      <div class="signature-content">
+        <div class="spacer-12"></div>
+
+        <div class="signature-box">
+          <canvas id="signatureCanvas"></canvas>
+        </div>
+
+        <input
+          id="receiverNameInput"
+          class="receiver-input"
+          type="text"
+          placeholder="Modtagers navn"
+          autocomplete="off"
+          autocapitalize="words"
+        >
+
+        <div class="btn-row">
+          <button class="btn small secondary" onclick="goToCamera()">Tilbage</button>
+          <button class="btn small secondary" onclick="clearReceiptData()">Ryd</button>
+          <button class="btn small primary" onclick="goToCamera()">OK</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-registered" class="screen">
+      <div class="check-wrap">
+        <div class="check">✓</div>
+        <div class="registered">Registreret</div>
+      </div>
+    </section>
+
+  </div>
+
+  <div id="saveOverlay" class="save-overlay">
+    <div class="save-card">
+      <div class="spinner"></div>
+      <div class="save-title">Gemmer...</div>
+      <div class="save-text">Overfører billeder og dokumentation</div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'https://script.google.com/macros/s/AKfycbyGR3pzqJyuO6gAi1RXfsFB6gIgci3G_lnsUvnCCqwMl9GD3tpHeboqJfT84r6MPhd7/exec';
+
+    let currentOrderNo = '';
+    let stopOrders = [];
+    let photos = [];
+    let selectedPhotoIndex = -1;
+    const MAX_PHOTOS = 5;
+
+    let barcodeFoundNo = '';
+
+    let signaturePadReady = false;
+    let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
+    let isSaving = false;
+
+    const DB_NAME = 'leveringsapp_db';
+    const DB_VERSION = 1;
+    const STORE_PENDING = 'pendingDeliveries';
+
+    const driverSelect = document.getElementById('driverSelect');
+
+    const savedDriver = localStorage.getItem('leveringsapp_driver');
+    if (savedDriver) driverSelect.value = savedDriver;
+
+    driverSelect.addEventListener('change', () => {
+      localStorage.setItem('leveringsapp_driver', driverSelect.value);
+      pulseHaptic(18);
+    });
+
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn');
+      if (btn && !btn.disabled) pulseHaptic(14);
+    });
+
+    async function apiPost(action, payload = {}, timeoutMs = 20000) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify({
+            action,
+            ...payload
+          }),
+          signal: controller.signal,
+          redirect: 'follow'
+        });
+
+        const text = await response.text();
+        let json;
+
+        try {
+          json = JSON.parse(text);
+        } catch (parseError) {
+          throw new Error('Ugyldigt svar fra server: ' + text.slice(0, 200));
+        }
+
+        if (!json.ok) {
+          throw new Error(json.error || 'Ukendt serverfejl');
+        }
+
+        return json.data;
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    function pulseHaptic(ms = 14) {
+      try {
+        if (navigator.vibrate) navigator.vibrate(ms);
+      } catch (e) {}
+    }
+
+    function openOrderScanner() {
+      document.getElementById('barcodeInput').click();
+    }
+
+    async function getDb() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onupgradeneeded = function(event) {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(STORE_PENDING)) {
+            db.createObjectStore(STORE_PENDING, { keyPath: 'id' });
+          }
+        };
+
+        request.onsuccess = function() {
+          const db = request.result;
+
+          db.onclose = function() {
+            console.warn('IndexedDB-forbindelse lukket');
+          };
+
+          db.onerror = function(event) {
+            console.error('IndexedDB-fejl', event);
+          };
+
+          resolve(db);
+        };
+
+        request.onerror = function() {
+          reject(request.error);
+        };
+      });
+    }
+
+    async function addPendingDelivery(payload) {
+      const db = await getDb();
+
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_PENDING, 'readwrite');
+        const store = tx.objectStore(STORE_PENDING);
+        store.put(payload);
+
+        tx.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+
+        tx.onerror = () => {
+          db.close();
+          reject(tx.error);
+        };
+
+        tx.onabort = () => {
+          db.close();
+          reject(tx.error || new Error('Transaction aborted'));
+        };
+      });
+    }
+
+    async function deletePendingDelivery(id) {
+      const db = await getDb();
+
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_PENDING, 'readwrite');
+        const store = tx.objectStore(STORE_PENDING);
+        store.delete(id);
+
+        tx.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+
+        tx.onerror = () => {
+          db.close();
+          reject(tx.error);
+        };
+
+        tx.onabort = () => {
+          db.close();
+          reject(tx.error || new Error('Transaction aborted'));
+        };
+      });
+    }
+
+    async function getAllPendingDeliveries() {
+      const db = await getDb();
+
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_PENDING, 'readonly');
+        const store = tx.objectStore(STORE_PENDING);
+        const request = store.getAll();
+
+        request.onsuccess = () => {
+          db.close();
+          resolve(request.result || []);
+        };
+
+        request.onerror = () => {
+          db.close();
+          reject(request.error);
+        };
+      });
+    }
+
+    async function updatePendingBanner() {
+      try {
+        const items = await getAllPendingDeliveries();
+        const banner = document.getElementById('pendingBanner');
+        if (!banner) return;
+
+        let pendingCount = 0;
+
+        items.forEach(item => {
+          if (Array.isArray(item.allOrders) && item.allOrders.length) {
+            pendingCount += item.allOrders.length;
+          } else if (item.orderNo) {
+            pendingCount += 1;
+          }
+        });
+
+        if (pendingCount > 0) {
+          banner.textContent = `${pendingCount} levering(er) afventer sending`;
+          banner.classList.remove('hidden');
+        } else {
+          banner.classList.add('hidden');
+        }
+      } catch (e) {
+        console.error('Kunne ikke opdatere pending-banner', e);
+      }
+    }
+
+    async function retryPendingDeliveries() {
+      const banner = document.getElementById('pendingBanner');
+      if (!banner) return;
+
+      if (!navigator.onLine) {
+        banner.textContent = 'Ingen forbindelse lige nu';
+        setTimeout(() => updatePendingBanner(), 2000);
+        return;
+      }
+
+      banner.textContent = 'Forsøger at sende...';
+
+      try {
+        await processPendingQueue();
+      } catch (e) {
+        console.error('Manuel retry fejlede', e);
+      }
+
+      await updatePendingBanner();
+    }
+
+    function makeDeliveryPayload() {
+      const signatureCanvas = document.getElementById('signatureCanvas');
+      let signatureData = '';
+
+      if (signaturePadReady && !isCanvasBlank(signatureCanvas)) {
+        signatureData = signatureCanvas.toDataURL('image/png');
+      }
+
+      return {
+        id: 'delivery_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+        orderNo: stopOrders[0] || currentOrderNo,
+        driver: driverSelect.value || '',
+        photos: JSON.parse(JSON.stringify(photos)),
+        signature: signatureData,
+        recipientName: (document.getElementById('receiverNameInput').value || '').trim(),
+        createdAt: new Date().toISOString(),
+        allOrders: JSON.parse(JSON.stringify(stopOrders))
+      };
+    }
+
+    async function sendDeliveryToServer(payload, timeoutMs = 20000) {
+      return apiPost('saveDelivery', { payload }, timeoutMs);
+    }
+
+    async function processPendingQueue() {
+      try {
+        const items = await getAllPendingDeliveries();
+        if (!items.length) {
+          await updatePendingBanner();
+          return;
+        }
+
+        for (const item of items) {
+          try {
+            await sendDeliveryToServer(item);
+            await deletePendingDelivery(item.id);
+          } catch (error) {
+            console.error('Afventer levering kunne ikke sendes endnu:', error);
+            break;
+          }
+        }
+
+        await updatePendingBanner();
+      } catch (e) {
+        console.error('Fejl i pending queue', e);
+      }
+    }
+
+    function showOfflineNote(show) {
+      const el = document.getElementById('offlineNote');
+      if (!el) return;
+      el.classList.toggle('hidden', !show);
+    }
+
+    function clearOfflineNote() {
+      showOfflineNote(false);
+    }
+
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(screen => {
+        screen.classList.remove('active');
+      });
+      document.getElementById(id).classList.add('active');
+    }
+
+    function setStatus(id, text, type = '') {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = text || '';
+      el.className = 'status';
+      if (type) el.classList.add(type);
+    }
+
+    function showSaveOverlay(show) {
+      document.getElementById('saveOverlay').classList.toggle('active', !!show);
+    }
+
+    function setSavingState(saving) {
+      isSaving = saving;
+      const saveBtn = document.getElementById('saveBtn');
+      if (saveBtn) saveBtn.disabled = saving;
+      showSaveOverlay(saving);
+    }
+
+    function renderOrderLists() {
+      const orderCard = document.getElementById('multiOrderListCard');
+      const orderList = document.getElementById('multiOrderList');
+      const cameraCard = document.getElementById('cameraOrderListCard');
+      const cameraList = document.getElementById('cameraOrderList');
+
+      orderList.innerHTML = '';
+      cameraList.innerHTML = '';
+
+      if (!stopOrders.length) {
+        orderCard.classList.add('hidden');
+        cameraCard.classList.add('hidden');
+        return;
+      }
+
+      stopOrders.forEach(orderNo => {
+        const pill1 = document.createElement('div');
+        pill1.className = 'order-pill';
+        pill1.textContent = orderNo;
+        orderList.appendChild(pill1);
+
+        const pill2 = document.createElement('div');
+        pill2.className = 'order-pill';
+        pill2.textContent = orderNo;
+        cameraList.appendChild(pill2);
+      });
+
+      orderCard.classList.remove('hidden');
+      cameraCard.classList.remove('hidden');
+    }
+
+    function goToHome() {
+      if (isSaving) return;
+      showScreen('screen-home');
+    }
+
+    function goToOrder() {
+      if (isSaving) return;
+
+      barcodeFoundNo = '';
+      currentOrderNo = '';
+      photos = [];
+      selectedPhotoIndex = -1;
+
+      document.getElementById('manualOrderInput').value = '';
+      document.getElementById('barcodeFoundWrap').classList.add('hidden');
+      document.getElementById('barcodeFoundNo').textContent = '-';
+
+      setStatus('orderStatus', '');
+      setStatus('cameraStatus', '');
+      clearOfflineNote();
+
+      renderOrderLists();
+      updatePhotoUI();
+      updatePendingBanner();
+      showScreen('screen-order');
+    }
+
+    function addCurrentOrder() {
+      const orderNo = (barcodeFoundNo || document.getElementById('manualOrderInput').value || '').trim();
+
+      if (!orderNo) {
+        setStatus('orderStatus', 'Scan eller skriv et ordrenummer først', 'error');
+        return;
+      }
+
+      if (stopOrders.includes(orderNo)) {
+        setStatus('orderStatus', 'Ordrenummeret er allerede tilføjet', 'error');
+        return;
+      }
+
+      stopOrders.push(orderNo);
+      currentOrderNo = orderNo;
+
+      document.getElementById('manualOrderInput').value = '';
+      barcodeFoundNo = '';
+      document.getElementById('barcodeFoundWrap').classList.add('hidden');
+      document.getElementById('barcodeFoundNo').textContent = '-';
+
+      renderOrderLists();
+      setStatus('orderStatus', 'Ordrenummer tilføjet', 'ok');
+    }
+
+    function removeLastOrder() {
+      const typed = document.getElementById('manualOrderInput').value.trim();
+
+      if (typed) {
+        document.getElementById('manualOrderInput').value = '';
+        setStatus('orderStatus', 'Indtastning slettet', 'ok');
+        return;
+      }
+
+      if (barcodeFoundNo) {
+        barcodeFoundNo = '';
+        document.getElementById('barcodeFoundWrap').classList.add('hidden');
+        document.getElementById('barcodeFoundNo').textContent = '-';
+        setStatus('orderStatus', 'Fundet ordrenummer slettet', 'ok');
+        return;
+      }
+
+      if (stopOrders.length) {
+        stopOrders.pop();
+        renderOrderLists();
+        setStatus('orderStatus', 'Sidste ordre slettet', 'ok');
+        return;
+      }
+
+      setStatus('orderStatus', 'Ingen ordre at slette', 'error');
+    }
+
+    async function handleOrderScanImage(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      barcodeFoundNo = '';
+      document.getElementById('barcodeFoundWrap').classList.add('hidden');
+      setStatus('orderStatus', 'Scanner ordrenummer...', '');
+
+      try {
+        const croppedDataUrl = await prepareOrderScanImage(file);
+
+        const result = await apiPost('scanOrderNumberFromImage', {
+          imageDataUrl: croppedDataUrl
+        }, 25000);
+
+        if (result && result.found && result.orderNo) {
+          barcodeFoundNo = result.orderNo;
+          document.getElementById('barcodeFoundNo').textContent = result.orderNo;
+          document.getElementById('barcodeFoundWrap').classList.remove('hidden');
+          setStatus('orderStatus', 'Ordrenummer fundet', 'ok');
+          pulseHaptic(30);
+        } else {
+          setStatus('orderStatus', 'Kunne ikke finde ordrenummer — prøv igen eller indtast manuelt.', 'error');
+        }
+
+      } catch (error) {
+        console.error(error);
+
+        if (!navigator.onLine) {
+          setStatus('orderStatus', 'Ingen forbindelse — indtast ordrenummer manuelt.', 'error');
+        } else {
+          const msg = error && error.message ? error.message : String(error);
+          if (msg.toLowerCase().includes('vision')) {
+            setStatus('orderStatus', 'Kunne ikke scanne ordrenummer — indtast manuelt.', 'error');
+          } else if (msg.toLowerCase().includes('failed to fetch') || msg.toLowerCase().includes('network')) {
+            setStatus('orderStatus', 'Netværksfejl — indtast ordrenummer manuelt.', 'error');
+          } else if (msg.toLowerCase().includes('abort')) {
+            setStatus('orderStatus', 'Scanning tog for lang tid — indtast manuelt.', 'error');
+          } else {
+            setStatus('orderStatus', 'Kunne ikke finde ordrenummer — prøv igen eller indtast manuelt.', 'error');
+          }
+        }
+      } finally {
+        event.target.value = '';
+      }
+    }
+
+    function goToCamera() {
+      if (isSaving) return;
+
+      const typed = document.getElementById('manualOrderInput').value.trim();
+      const pendingOrder = (barcodeFoundNo || typed || '').trim();
+
+      if (pendingOrder && !stopOrders.includes(pendingOrder)) {
+        stopOrders.push(pendingOrder);
+      }
+
+      if (!stopOrders.length) {
+        setStatus('orderStatus', 'Tilføj mindst ét ordrenummer først', 'error');
+        return;
+      }
+
+      currentOrderNo = stopOrders[0];
+
+      document.getElementById('manualOrderInput').value = '';
+      barcodeFoundNo = '';
+      document.getElementById('barcodeFoundWrap').classList.add('hidden');
+      document.getElementById('barcodeFoundNo').textContent = '-';
+
+      clearOfflineNote();
+      renderOrderLists();
+      updatePhotoUI();
+      showScreen('screen-camera');
+    }
+
+    async function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function prepareOrderScanImage(file) {
+      const originalDataUrl = await fileToDataUrl(file);
+
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+
+        img.onload = function() {
+          const maxWidth = 1400;
+          const scale = Math.min(1, maxWidth / img.width);
+          const scaledWidth = Math.round(img.width * scale);
+          const scaledHeight = Math.round(img.height * scale);
+
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = scaledWidth;
+          tempCanvas.height = scaledHeight;
+
+          const tempCtx = tempCanvas.getContext('2d');
+          tempCtx.drawImage(img, 0, 0, scaledWidth, scaledHeight);
+
+          const cropWidth = Math.round(scaledWidth * 0.82);
+          const cropHeight = Math.round(scaledHeight * 0.42);
+          const cropX = Math.round((scaledWidth - cropWidth) / 2);
+          const cropY = Math.round((scaledHeight - cropHeight) / 2);
+
+          const cropCanvas = document.createElement('canvas');
+          cropCanvas.width = cropWidth;
+          cropCanvas.height = cropHeight;
+
+          const cropCtx = cropCanvas.getContext('2d');
+          cropCtx.drawImage(
+            tempCanvas,
+            cropX, cropY, cropWidth, cropHeight,
+            0, 0, cropWidth, cropHeight
+          );
+
+          const dataUrl = cropCanvas.toDataURL('image/jpeg', 0.84);
+          resolve(dataUrl);
+        };
+
+        img.onerror = reject;
+        img.src = originalDataUrl;
+      });
+    }
+
+    function handlePhotoSelect(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      if (photos.length >= MAX_PHOTOS) {
+        setStatus('cameraStatus', 'Du kan maks. tage 5 billeder', 'error');
+        event.target.value = '';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const maxWidth = 900;
+          const scale = Math.min(1, maxWidth / img.width);
+          const targetWidth = Math.round(img.width * scale);
+          const targetHeight = Math.round(img.height * scale);
+
+          const canvas = document.createElement('canvas');
+          canvas.width = targetWidth;
+          canvas.height = targetHeight;
+
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.50);
+          photos.push(dataUrl);
+          selectedPhotoIndex = photos.length - 1;
+          updatePhotoUI();
+
+          setStatus('cameraStatus', 'Billede tilføjet', 'ok');
+          setTimeout(() => {
+            if (document.getElementById('cameraStatus').textContent === 'Billede tilføjet') {
+              setStatus('cameraStatus', '');
+            }
+          }, 1200);
+
+          event.target.value = '';
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function selectPhoto(index) {
+      if (index < 0 || index >= photos.length) return;
+      selectedPhotoIndex = index;
+      updatePhotoUI();
+    }
+
+    function deleteSelectedPhoto() {
+      if (isSaving) return;
+      if (selectedPhotoIndex < 0 || selectedPhotoIndex >= photos.length) return;
+
+      photos.splice(selectedPhotoIndex, 1);
+
+      if (photos.length === 0) {
+        selectedPhotoIndex = -1;
+      } else if (selectedPhotoIndex >= photos.length) {
+        selectedPhotoIndex = photos.length - 1;
+      }
+
+      updatePhotoUI();
+      setStatus('cameraStatus', 'Billede slettet', 'ok');
+      setTimeout(() => {
+        if (document.getElementById('cameraStatus').textContent === 'Billede slettet') {
+          setStatus('cameraStatus', '');
+        }
+      }, 1200);
+    }
+
+    function updatePhotoUI() {
+      const preview = document.getElementById('photoPreview');
+      const placeholder = document.getElementById('photoPlaceholder');
+
+      if (photos.length > 0) {
+        if (selectedPhotoIndex < 0 || selectedPhotoIndex >= photos.length) {
+          selectedPhotoIndex = photos.length - 1;
+        }
+
+        preview.src = photos[selectedPhotoIndex];
+        preview.style.display = 'block';
+        placeholder.style.display = 'none';
+      } else {
+        selectedPhotoIndex = -1;
+        preview.src = '';
+        preview.style.display = 'none';
+        placeholder.style.display = 'flex';
+      }
+
+      updateThumb('thumb1', photos[0], '1', 0);
+      updateThumb('thumb2', photos[1], '2', 1);
+      updateThumb('thumb3', photos[2], '3', 2);
+      updateThumb('thumb4', photos[3], '4', 3);
+      updateThumb('thumb5', photos[4], '5', 4);
+    }
+
+    function updateThumb(id, photo, fallbackText, index) {
+      const el = document.getElementById(id);
+      if (!el) return;
+
+      el.classList.remove('selected');
+
+      if (photo) {
+        el.innerHTML = '<img src="' + photo + '" alt="' + fallbackText + '">';
+        if (index === selectedPhotoIndex) {
+          el.classList.add('selected');
+        }
+      } else {
+        el.textContent = fallbackText;
+      }
+    }
+
+    function goToSignature() {
+      if (isSaving) return;
+      showScreen('screen-signature');
+      setTimeout(() => {
+        initSignatureCanvas();
+      }, 50);
+    }
+
+    async function goToRegistered() {
+      if (isSaving) return;
+
+      if (!driverSelect.value) {
+        goToHome();
+        setTimeout(() => alert('Vælg chauffør først'), 100);
+        return;
+      }
+
+      if (!stopOrders.length) {
+        setStatus('cameraStatus', 'Ordrenummer mangler', 'error');
+        return;
+      }
+
+      if (photos.length === 0) {
+        setStatus('cameraStatus', 'Du skal tage mindst ét billede', 'error');
+        return;
+      }
+
+      setSavingState(true);
+      setStatus('cameraStatus', '');
+      clearOfflineNote();
+
+      const payload = makeDeliveryPayload();
+
+      if (navigator.onLine) {
+        try {
+          await sendDeliveryToServer(payload, 25000);
+          await updatePendingBanner();
+
+          setSavingState(false);
+          showScreen('screen-registered');
+
+          setTimeout(() => {
+            resetAppState();
+            goToHome();
+          }, 1800);
+
+          return;
+        } catch (sendError) {
+          console.error('Direkte upload fejlede eller timed out:', sendError);
+        }
+      }
+
+      try {
+        await addPendingDelivery(payload);
+        await updatePendingBanner();
+
+        setSavingState(false);
+
+        const offlineNote = document.getElementById('offlineNote');
+        if (offlineNote) {
+          offlineNote.textContent = navigator.onLine
+            ? 'Forbindelsen er langsom. Bare rolig — leveringen er gemt på enheden og sendes, når appen har forbindelse igen.'
+            : 'Du er vidst på Lars Tyndskids mark 😅 Bare rolig — leveringen er gemt på enheden og sendes, når appen har forbindelse igen.';
+        }
+
+        showOfflineNote(true);
+
+        if (navigator.onLine) {
+          setTimeout(() => {
+            processPendingQueue();
+          }, 1500);
+        }
+
+        setTimeout(() => {
+          resetAppState(false);
+          goToHome();
+        }, 7000);
+
+      } catch (queueError) {
+        console.error('Kunne ikke gemme lokalt:', queueError);
+
+        const msg =
+          (queueError && queueError.message) ? queueError.message :
+          (typeof queueError === 'string' ? queueError : JSON.stringify(queueError));
+
+        setSavingState(false);
+        setStatus('cameraStatus', 'Kunne ikke gemme lokalt på enheden', 'error');
+        alert('Leveringen blev ikke gemt. Prøv igen.\n\nFejl: ' + msg);
+      }
+    }
+
+    function resetAppState(clearNote = true) {
+      currentOrderNo = '';
+      stopOrders = [];
+      photos = [];
+      barcodeFoundNo = '';
+      selectedPhotoIndex = -1;
+
+      document.getElementById('manualOrderInput').value = '';
+      document.getElementById('barcodeFoundWrap').classList.add('hidden');
+      document.getElementById('barcodeFoundNo').textContent = '-';
+      document.getElementById('receiverNameInput').value = '';
+
+      setStatus('orderStatus', '');
+      setStatus('cameraStatus', '');
+
+      if (clearNote) {
+        clearOfflineNote();
+      }
+
+      renderOrderLists();
+      updatePhotoUI();
+      updatePendingBanner();
+
+      if (signaturePadReady) {
+        clearSignature();
+      }
+    }
+
+    function isCanvasBlank(canvas) {
+      const blank = document.createElement('canvas');
+      blank.width = canvas.width;
+      blank.height = canvas.height;
+      return canvas.toDataURL() === blank.toDataURL();
+    }
+
+    function initSignatureCanvas() {
+      const canvas = document.getElementById('signatureCanvas');
+      const ctx = canvas.getContext('2d');
+
+      resizeCanvas(canvas, ctx);
+
+      if (signaturePadReady) return;
+
+      canvas.addEventListener('pointerdown', (e) => {
+        isDrawing = true;
+        const pos = getCanvasPos(canvas, e);
+        lastX = pos.x;
+        lastY = pos.y;
+      });
+
+      canvas.addEventListener('pointermove', (e) => {
+        if (!isDrawing) return;
+        const pos = getCanvasPos(canvas, e);
+        ctx.strokeStyle = '#111';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+        lastX = pos.x;
+        lastY = pos.y;
+      });
+
+      canvas.addEventListener('pointerup', () => isDrawing = false);
+      canvas.addEventListener('pointerleave', () => isDrawing = false);
+
+      window.addEventListener('resize', () => resizeCanvas(canvas, ctx));
+      signaturePadReady = true;
+    }
+
+    function resizeCanvas(canvas, ctx) {
+      const rect = canvas.getBoundingClientRect();
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = rect.width * ratio;
+      canvas.height = rect.height * ratio;
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      ctx.fillStyle = '#efefef';
+      ctx.fillRect(0, 0, rect.width, rect.height);
+    }
+
+    function getCanvasPos(canvas, evt) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: evt.clientX - rect.left,
+        y: evt.clientY - rect.top
+      };
+    }
+
+    function clearSignature() {
+      const canvas = document.getElementById('signatureCanvas');
+      const ctx = canvas.getContext('2d');
+      const rect = canvas.getBoundingClientRect();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#efefef';
+      ctx.fillRect(0, 0, rect.width, rect.height);
+    }
+
+    function clearReceiptData() {
+      clearSignature();
+      document.getElementById('receiverNameInput').value = '';
+    }
+
+    window.addEventListener('load', async () => {
+      await updatePendingBanner();
+      await processPendingQueue();
+      renderOrderLists();
+    });
+
+    window.addEventListener('online', async () => {
+      await processPendingQueue();
+    });
+  </script>
+</body>
+</html>
