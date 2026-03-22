@@ -1,4 +1,4 @@
-const CACHE_NAME = 'leveringsapp-v5';
+const CACHE_NAME = 'leveringsapp-v6';
 const APP_SHELL = [
   './',
   './index.html',
@@ -6,6 +6,7 @@ const APP_SHELL = [
   './wallmann-logo.png',
   './icon-192.png',
   './icon-512.png',
+  './icon-maskable-512.png',
   './apple-touch-icon.png'
 ];
 
