@@ -629,13 +629,13 @@
 
       <div class="spacer-30"></div>
 
-      <button class="btn primary" onclick="goToOrder()">Ny levering</button>
+      <button id="newDeliveryBtn" class="btn primary" onclick="goToOrder()" disabled>Ny levering</button>
     </section>
 
     <section id="screen-order" class="screen">
       <div class="order-screen-content">
 
-        <button id="newDeliveryBtn" class="btn primary" onclick="goToOrder()" disabled>Ny levering</button>
+        <button class="btn primary" onclick="openOrderScanner()">Scan ordrenummer</button>
 
         <input
           id="barcodeInput"
@@ -813,6 +813,11 @@
       const btn = e.target.closest('.btn');
       if (btn && !btn.disabled) pulseHaptic(14);
     });
+
+    function updateNewDeliveryButton() {
+      if (!newDeliveryBtn) return;
+      newDeliveryBtn.disabled = !driverSelect.value;
+    }
 
     async function apiPost(action, payload = {}, timeoutMs = 20000) {
       const controller = new AbortController();
@@ -1133,6 +1138,11 @@
     function goToOrder() {
       if (isSaving) return;
 
+      if (!driverSelect.value) {
+        updateNewDeliveryButton();
+        return;
+      }
+      
       barcodeFoundNo = '';
       currentOrderNo = '';
       photos = [];
