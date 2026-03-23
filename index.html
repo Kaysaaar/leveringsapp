@@ -635,7 +635,7 @@
     <section id="screen-order" class="screen">
       <div class="order-screen-content">
 
-        <button class="btn primary" onclick="openOrderScanner()">Scan ordrenummer</button>
+        <button id="newDeliveryBtn" class="btn primary" onclick="goToOrder()" disabled>Ny levering</button>
 
         <input
           id="barcodeInput"
@@ -799,13 +799,14 @@
     const STORE_PENDING = 'pendingDeliveries';
 
     const driverSelect = document.getElementById('driverSelect');
+    const newDeliveryBtn = document.getElementById('newDeliveryBtn');
 
     const savedDriver = localStorage.getItem('leveringsapp_driver');
     if (savedDriver) driverSelect.value = savedDriver;
 
     driverSelect.addEventListener('change', () => {
-      localStorage.setItem('leveringsapp_driver', driverSelect.value);
       pulseHaptic(18);
+      newDeliveryBtn.disabled = !driverSelect.value;
     });
 
     document.addEventListener('click', (e) => {
@@ -1640,6 +1641,7 @@
     }
 
     window.addEventListener('load', async () => {
+      newDeliveryBtn.disabled = !driverSelect.value;
       await updatePendingBanner();
       await processPendingQueue();
       renderOrderLists();
