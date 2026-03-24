@@ -1,4 +1,4 @@
-const CACHE_NAME = 'leveringsapp-v12';
+const CACHE_NAME = 'leveringsapp-v13';
 const APP_SHELL = [
   './',
   './index.html',
