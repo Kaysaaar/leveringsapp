@@ -1,4 +1,4 @@
-const CACHE_NAME = 'leveringsapp-v15';
+const CACHE_NAME = 'leveringsapp-v16';
 const APP_SHELL = [
   './',
   './index.html',
@@ -14,7 +14,6 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL))
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
@@ -39,22 +38,24 @@ self.addEventListener('fetch', event => {
     caches.match(request).then(cached => {
       if (cached) return cached;
 
-      return fetch(request).then(response => {
-        const responseClone = response.clone();
+      return fetch(request)
+        .then(response => {
+          const responseClone = response.clone();
 
-        if (
-          request.url.startsWith(self.location.origin) &&
-          response.status === 200
-        ) {
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(request, responseClone);
-          });
-        }
+          if (
+            request.url.startsWith(self.location.origin) &&
+            response.status === 200
+          ) {
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(request, responseClone);
+            });
+          }
 
-        return response;
-      }).catch(() => {
-        return caches.match('./index.html');
-      });
+          return response;
+        })
+        .catch(() => {
+          return caches.match('./index.html');
+        });
     })
   );
 });
