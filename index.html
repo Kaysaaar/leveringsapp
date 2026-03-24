@@ -519,7 +519,7 @@
       }
 
       .bottom-version{
-        margin-top:10px;
+        margin-top:32px;
       }
 
     .update-banner{
@@ -669,7 +669,7 @@
       <div class="spacer-30"></div>
 
       <button id="newDeliveryBtn" class="btn primary" onclick="goToOrder()" disabled>Ny levering</button>
-      <div class="app-version bottom-version">v<span id="appVersionText"></span></div>
+      <div class="app-version bottom-version">Version<span id="appVersionText"></span></div>
     </section>
 
     <section id="screen-order" class="screen">
@@ -753,7 +753,7 @@
         <div id="cameraStatus" class="status"></div>
 
         <div id="offlineNote" class="offline-note hidden">
-          Du er vidst på Lars Tyndskids mark 😅 Bare rolig — leveringen er gemt på enheden og sendes, når appen har forbindelse igen.
+          Forbindelsen er dårlig. Bare rolig — leveringen er gemt på enheden og sendes, når appen har forbindelse igen.
         </div>
 
         <div class="btn-row">
@@ -823,7 +823,7 @@
 
   <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbyGR3pzqJyuO6gAi1RXfsFB6gIgci3G_lnsUvnCCqwMl9GD3tpHeboqJfT84r6MPhd7/exec';
-    const APP_VERSION = '1.14';
+    const APP_VERSION = '1.15';
     
     let currentOrderNo = '';
     let stopOrders = [];
