@@ -510,6 +510,45 @@
       pointer-events:none;
     }
 
+    .app-version{
+        font-size:10px;
+        font-weight:600;
+        opacity:.28;
+        letter-spacing:.3px;
+        text-align:center;
+      }
+
+      .bottom-version{
+        margin-top:10px;
+      }
+
+    .update-banner{
+      position:fixed;
+      left:12px;
+      right:12px;
+      bottom:calc(14px + env(safe-area-inset-bottom));
+      z-index:10000;
+      background:rgba(255,255,255,0.96);
+      color:var(--dark);
+      border-radius:14px;
+      padding:12px 14px;
+      box-shadow:0 12px 28px rgba(0,0,0,0.22);
+      text-align:center;
+      font-size:14px;
+      font-weight:700;
+    }
+
+    .update-link{
+      border:none;
+      background:none;
+      color:inherit;
+      font:inherit;
+      font-weight:800;
+      text-decoration:underline;
+      cursor:pointer;
+      padding:0;
+    }
+
     .pending-banner{
       margin-top:14px;
       padding:12px 14px;
@@ -579,15 +618,6 @@
           10px;
       }
 
-      .app-version{
-        margin-top:8px;
-        font-size:10px;
-        font-weight:600;
-        opacity:.28;
-        letter-spacing:.3px;
-        text-align:center;
-      }
-
       .btn-row{
         gap:8px;
       }
@@ -618,7 +648,6 @@
           alt="Wallmann"
         >
         <div class="home-logo-subtitle">LeveringsApp</div>
-        <div class="app-version">Version <span id="appVersionText"></span></div>
       </div>
 
       <select id="driverSelect" class="dropdown" required>
@@ -640,6 +669,7 @@
       <div class="spacer-30"></div>
 
       <button id="newDeliveryBtn" class="btn primary" onclick="goToOrder()" disabled>Ny levering</button>
+      <div class="app-version bottom-version">v<span id="appVersionText"></span></div>
     </section>
 
     <section id="screen-order" class="screen">
@@ -779,6 +809,10 @@
 
   </div>
 
+  <div id="updateBanner" class="update-banner hidden">
+    Ny version klar — <button class="update-link" onclick="applyAppUpdate()">tryk her</button>
+  </div>
+  
   <div id="saveOverlay" class="save-overlay">
     <div class="save-card">
       <div class="spinner"></div>
@@ -789,7 +823,7 @@
 
   <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbyGR3pzqJyuO6gAi1RXfsFB6gIgci3G_lnsUvnCCqwMl9GD3tpHeboqJfT84r6MPhd7/exec';
-    const APP_VERSION = '1.13';
+    const APP_VERSION = '1.14';
     
     let currentOrderNo = '';
     let stopOrders = [];
@@ -1706,10 +1740,52 @@
       await processPendingQueue();
     });
 
+    let swRegistration = null;
+    let waitingWorker = null;
+    let refreshing = false;
+
+    function showUpdateBanner(show) {
+      const el = document.getElementById('updateBanner');
+      if (!el) return;
+      el.classList.toggle('hidden', !show);
+    }
+
+    function applyAppUpdate() {
+      if (waitingWorker) {
+        waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+      }
+    }
+
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js')
-          .catch(error => console.error('Service worker kunne ikke registreres:', error));
+      window.addEventListener('load', async () => {
+         try {
+          swRegistration = await navigator.serviceWorker.register('./service-worker.js');
+
+          if (swRegistration.waiting) {
+            waitingWorker = swRegistration.waiting;
+            showUpdateBanner(true);
+          }
+
+          swRegistration.addEventListener('updatefound', () => {
+            const newWorker = swRegistration.installing;
+            if (!newWorker) return;
+
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                waitingWorker = newWorker;
+                showUpdateBanner(true);
+              }
+            });
+          });
+
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshing) return;
+            refreshing = true;
+            window.location.reload();
+          });
+        } catch (error) {
+          console.error('Service worker kunne ikke registreres:', error);
+        }
       });
     }
   </script>
