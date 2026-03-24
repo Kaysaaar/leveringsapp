@@ -579,6 +579,15 @@
           10px;
       }
 
+      .app-version{
+        margin-top:8px;
+        font-size:10px;
+        font-weight:600;
+        opacity:.28;
+        letter-spacing:.3px;
+        text-align:center;
+      }
+
       .btn-row{
         gap:8px;
       }
@@ -609,6 +618,7 @@
           alt="Wallmann"
         >
         <div class="home-logo-subtitle">LeveringsApp</div>
+        <div class="app-version">Version <span id="appVersionText"></span></div>
       </div>
 
       <select id="driverSelect" class="dropdown" required>
@@ -779,7 +789,8 @@
 
   <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbyGR3pzqJyuO6gAi1RXfsFB6gIgci3G_lnsUvnCCqwMl9GD3tpHeboqJfT84r6MPhd7/exec';
-
+    const APP_VERSION = '1.13';
+    
     let currentOrderNo = '';
     let stopOrders = [];
     let photos = [];
@@ -1682,6 +1693,9 @@
     }
 
     window.addEventListener('load', async () => {
+      const versionEl = document.getElementById('appVersionText');
+      if (versionEl) versionEl.textContent = APP_VERSION;
+      
       newDeliveryBtn.disabled = !driverSelect.value;
       await updatePendingBanner();
       await processPendingQueue();
