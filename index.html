@@ -113,6 +113,15 @@
       transform:scale(0.98);
     }
 
+    .btn.pressed{
+      transform:scale(0.975);
+      opacity:0.96;
+    }
+
+    .thumb.pressed{
+      transform:scale(0.97);
+    }
+
     .btn.small{
       width:auto;
       min-width:90px;
@@ -599,8 +608,13 @@
     }
 
     .save-btn{
-      background:rgba(255,255,255,0.82);
-      color:var(--dark);
+      background:linear-gradient(180deg, #8BFFAE 0%, #42D971 58%, #2EB85C 100%);
+      color:#103322;
+      font-weight:800;
+      box-shadow:
+        0 12px 26px rgba(33, 160, 84, 0.34),
+        inset 0 1px 0 rgba(255,255,255,0.42);
+      border:1px solid rgba(255,255,255,0.22);
     }
 
     .receiver-input{
@@ -669,7 +683,7 @@
       <div class="spacer-30"></div>
 
       <button id="newDeliveryBtn" class="btn primary" onclick="goToOrder()" disabled>Ny levering</button>
-      <div class="app-version bottom-version">Version<span id="appVersionText"></span></div>
+      <div class="app-version bottom-version">Version <span id="appVersionText"></span></div>
     </section>
 
     <section id="screen-order" class="screen">
@@ -823,7 +837,7 @@
 
   <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbyGR3pzqJyuO6gAi1RXfsFB6gIgci3G_lnsUvnCCqwMl9GD3tpHeboqJfT84r6MPhd7/exec';
-    const APP_VERSION = '1.15';
+    const APP_VERSION = '1.17';
     
     let currentOrderNo = '';
     let stopOrders = [];
@@ -851,7 +865,8 @@
 
     driverSelect.addEventListener('change', () => {
       pulseHaptic(18);
-      newDeliveryBtn.disabled = !driverSelect.value;
+      localStorage.setItem('leveringsapp_driver', driverSelect.value);
+      updateNewDeliveryButton();
     });
 
     document.addEventListener('click', (e) => {
@@ -905,6 +920,25 @@
       try {
         if (navigator.vibrate) navigator.vibrate(ms);
       } catch (e) {}
+    }
+
+    function bindPressFeedback(selector) {
+      document.querySelectorAll(selector).forEach(el => {
+        const add = () => {
+          if (!el.disabled) el.classList.add('pressed');
+        };
+
+        const remove = () => {
+          el.classList.remove('pressed');
+        };
+
+        el.addEventListener('touchstart', add, { passive: true });
+        el.addEventListener('touchend', remove, { passive: true });
+        el.addEventListener('touchcancel', remove, { passive: true });
+        el.addEventListener('mousedown', add);
+        el.addEventListener('mouseup', remove);
+        el.addEventListener('mouseleave', remove);
+      });
     }
 
     function openOrderScanner() {
@@ -1729,8 +1763,10 @@
     window.addEventListener('load', async () => {
       const versionEl = document.getElementById('appVersionText');
       if (versionEl) versionEl.textContent = APP_VERSION;
-      
-      newDeliveryBtn.disabled = !driverSelect.value;
+
+      bindPressFeedback('.btn, .thumb');
+
+      updateNewDeliveryButton();
       await updatePendingBanner();
       await processPendingQueue();
       renderOrderLists();
