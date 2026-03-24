@@ -1,4 +1,4 @@
-const CACHE_NAME = 'leveringsapp-v13';
+const CACHE_NAME = 'leveringsapp-v14';
 const APP_SHELL = [
   './',
   './index.html',
@@ -57,4 +57,10 @@ self.addEventListener('fetch', event => {
       });
     })
   );
+});
+
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
