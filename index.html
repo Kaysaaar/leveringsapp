@@ -310,7 +310,7 @@
     }
 
     .signature-box{
-      height:min(34vh, 280px);
+      height:min(26vh, 210px);
       background:#efefef;
       border-radius:16px;
       border:1px solid #d0d0d0;
@@ -1586,7 +1586,7 @@
       const canvas = document.getElementById('signatureCanvas');
       const ctx = canvas.getContext('2d');
 
-      resizeCanvas(canvas, ctx);
+      resizeCanvas(canvas, ctx, true);
 
       if (signaturePadReady) return;
 
@@ -1603,6 +1603,7 @@
         ctx.strokeStyle = '#111';
         ctx.lineWidth = 3;
         ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
         ctx.beginPath();
         ctx.moveTo(lastX, lastY);
         ctx.lineTo(pos.x, pos.y);
@@ -1612,20 +1613,50 @@
       });
 
       canvas.addEventListener('pointerup', () => isDrawing = false);
+      canvas.addEventListener('pointercancel', () => isDrawing = false);
       canvas.addEventListener('pointerleave', () => isDrawing = false);
 
-      window.addEventListener('resize', () => resizeCanvas(canvas, ctx));
+      let resizeTimer;
+      window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+          resizeCanvas(canvas, ctx, true);
+        }, 120);
+      });
+
       signaturePadReady = true;
     }
 
-    function resizeCanvas(canvas, ctx) {
+    function resizeCanvas(canvas, ctx, preserve = true) {
       const rect = canvas.getBoundingClientRect();
       const ratio = window.devicePixelRatio || 1;
-      canvas.width = rect.width * ratio;
-      canvas.height = rect.height * ratio;
+
+      let snapshot = null;
+      if (preserve && canvas.width > 0 && canvas.height > 0) {
+        try {
+          snapshot = document.createElement('canvas');
+          snapshot.width = canvas.width;
+          snapshot.height = canvas.height;
+          snapshot.getContext('2d').drawImage(canvas, 0, 0);
+        } catch (e) {}
+      }
+
+      canvas.width = Math.max(1, Math.round(rect.width * ratio));
+      canvas.height = Math.max(1, Math.round(rect.height * ratio));
+
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       ctx.fillStyle = '#efefef';
       ctx.fillRect(0, 0, rect.width, rect.height);
+
+      if (snapshot) {
+        try {
+          ctx.drawImage(
+            snapshot,
+            0, 0, snapshot.width, snapshot.height,
+            0, 0, rect.width, rect.height
+          );
+        } catch (e) {}
+      }
     }
 
     function getCanvasPos(canvas, evt) {
