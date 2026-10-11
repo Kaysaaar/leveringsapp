@@ -692,6 +692,64 @@
     .bottom-version { margin-top:16px; opacity:.55; }
     .update-banner { font-size:13px; }
     @media (prefers-reduced-motion:reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
+
+    
+    /* v1.23 – Ret overlap mellem ordrenumre */
+
+    /* Forhindrer at felterne presses sammen */
+    .order-screen-content > * {
+      flex-shrink: 0;
+    }
+
+    /* Ordreboksen tilpasser sin højde til indholdet */
+    .order-list-card {
+      flex-shrink: 0;
+      height: auto;
+    }
+
+    /* Vis ordrenumre i to pæne kolonner */
+    .order-list-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    /* Ordrenumrene holder sig inden for boksen */
+    .order-pill {
+      width: 100%;
+      min-width: 0;
+      height: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 6px 10px;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+
+    /* Plads til sletteknappen */
+    #multiOrderList .order-pill {
+      justify-content: space-between;
+    }
+
+    .order-pill button {
+      flex: 0 0 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      margin: 0;
+    }
+
+    /* Centrer sidste nummer ved ulige antal */
+    .order-list-grid .order-pill:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+      width: calc(50% - 5px);
+      justify-self: center;
+    }
+    
   </style>
 </head>
 <body>
@@ -901,7 +959,7 @@
   <script>
 'use strict';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyGR3pzqJyuO6gAi1RXfsFB6gIgci3G_lnsUvnCCqwMl9GD3tpHeboqJfT84r6MPhd7/exec';
-const APP_VERSION = '1.22';
+const APP_VERSION = '1.23';
 const MAX_PHOTOS = 5;
 const MAX_ORDERS = 20;
 // Keep the existing database and store: v1.21 pending deliveries remain available.
