@@ -807,6 +807,76 @@
     }
 
     
+
+    /* v1.25 – Swipebare billedminiaturer, separat sletning og fuldskærmsvisning. */
+    #screen-camera .photo-strip-heading {
+      display:flex; align-items:center; justify-content:space-between;
+      flex-shrink:0; font-size:14px; font-weight:700;
+      margin-top:6px; color:rgba(245,247,246,.9);
+    }
+    #screen-camera #photoCount {font-weight:600; opacity:.8;}
+    #screen-camera #photoThumbRow {
+      display:flex; flex-direction:row; flex-wrap:nowrap; align-items:stretch;
+      gap:8px; width:100%; overflow-x:auto; overflow-y:hidden;
+      padding:4px 2px 10px; scroll-snap-type:x proximity;
+      -webkit-overflow-scrolling:touch; touch-action:pan-x pan-y;
+      scrollbar-width:thin; flex-shrink:0;
+    }
+    #screen-camera #photoThumbRow .thumb {
+      position:relative; flex:0 0 calc((100% - 32px) / 5);
+      width:calc((100% - 32px) / 5); height:auto;
+      aspect-ratio:3/4; min-height:70px; padding:0;
+      scroll-snap-align:start; overflow:hidden;
+    }
+    #screen-camera .thumb-open {
+      position:absolute; inset:0; width:100%; height:100%; border:0;
+      background:transparent; padding:0; margin:0; cursor:pointer;
+    }
+    #screen-camera .thumb-open img {width:100%; height:100%; object-fit:cover; border-radius:8px; display:block;}
+    #screen-camera .thumb-open:focus-visible {outline:2px solid #b4efc5; outline-offset:-2px;}
+    #screen-camera .thumb-placeholder {font-weight:700; opacity:.7;}
+    #screen-camera .thumb-index {
+      position:absolute; left:4px; bottom:4px; background:rgba(0,0,0,.66);
+      color:white; padding:2px 5px; border-radius:5px;
+      font-size:11px; line-height:1.2; pointer-events:none;
+    }
+    #screen-camera .thumb-remove {
+      position:absolute; right:3px; top:3px; z-index:2;
+      width:32px; height:32px; min-width:32px; min-height:32px;
+      display:flex; align-items:center; justify-content:center;
+      color:#fff; background:#a62e38; border:1px solid rgba(255,255,255,.5);
+      border-radius:50%; font-size:25px; line-height:1;
+      cursor:pointer; padding:0; box-shadow:0 2px 8px rgba(0,0,0,.3);
+    }
+    #screen-camera .photo-scroll-help {
+      text-align:center; font-size:12px; opacity:.75; flex-shrink:0;
+    }
+    #screen-camera .camera-actions {gap:10px;}
+    #screen-camera .camera-actions > .btn {
+      flex:1 1 0; width:auto; min-width:0; min-height:52px;
+      font-size:clamp(14px,4vw,18px); white-space:nowrap;
+      text-align:center;
+    }
+    #screen-camera .camera-actions .camera-main-btn {padding:12px 4px;}
+    .photo-modal {
+      position:fixed; inset:0; z-index:10002; padding:
+        calc(56px + env(safe-area-inset-top)) 12px
+        calc(55px + env(safe-area-inset-bottom));
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      background:rgba(7,11,10,.97);
+    }
+    .photo-modal-image {display:block; max-width:100%; max-height:100%; object-fit:contain; border-radius:6px;}
+    .photo-modal-close {
+      position:absolute; top:calc(12px + env(safe-area-inset-top)); right:14px;
+      width:44px; height:44px; border-radius:50%; border:1px solid #96aaa0;
+      background:#263c33; color:white; font-size:32px; line-height:1;
+      display:flex; align-items:center; justify-content:center; cursor:pointer;
+    }
+    .photo-modal-counter {
+      position:absolute; bottom:calc(14px + env(safe-area-inset-bottom));
+      color:#f5f7f6; font-size:14px; font-weight:700;
+    }
+
   </style>
 </head>
 <body>
@@ -906,18 +976,12 @@
           <div id="cameraOrderList" class="order-list-grid"></div>
         </div>
 
-        <div class="thumb-row">
-          <div class="thumb" id="thumb1" onclick="selectPhoto(0)">1</div>
-          <div class="thumb" id="thumb2" onclick="selectPhoto(1)">2</div>
-          <div class="thumb" id="thumb3" onclick="selectPhoto(2)">3</div>
-          <div class="thumb" id="thumb4" onclick="selectPhoto(3)">4</div>
-          <div class="thumb" id="thumb5" onclick="selectPhoto(4)">5</div>
+        <div class="photo-strip-heading">
+          <span>Billeder</span>
+          <span id="photoCount" aria-live="polite">0/10</span>
         </div>
-
-        <div class="photo-box">
-          <div id="photoPlaceholder" class="photo-placeholder">Ingen billeder endnu</div>
-          <img id="photoPreview" class="preview-image" alt="Preview">
-        </div>
+        <div id="photoThumbRow" class="thumb-row" aria-label="Billeder af leveringen – swipe vandret for flere"></div>
+        <div id="photoScrollHelp" class="photo-scroll-help hidden">Swipe til siden for flere billeder ↔</div>
 
         <input
           id="photoInput"
@@ -934,16 +998,10 @@
           Forbindelsen er dårlig. Bare rolig — leveringen er gemt på enheden og sendes, når appen har forbindelse igen.
         </div>
 
-        <div class="btn-row">
-          <button class="btn small secondary" onclick="deleteSelectedPhoto()">Slet billede</button>
+        <div class="btn-row camera-actions">
           <button class="btn small secondary" id="receiptBtn" onclick="goToSignature()">Kvittering</button>
+          <label for="photoInput" class="btn primary camera-main-btn" aria-label="Tag billede">📷 Tag billede</label>
         </div>
-
-        <div class="spacer-10"></div>
-
-        <label for="photoInput" class="btn primary camera-main-btn" aria-label="Tag billede">📷 Tag billede</label>
-
-        <div class="spacer-12"></div>
 
         <div class="btn-row action-row-bottom">
           <button class="btn small back-btn" onclick="goToOrder()">Tilbage</button>
@@ -1001,6 +1059,11 @@
       <button class="text-button" onclick="closeScanner()">Annuller</button>
     </div>
   </div>
+  <div id="photoModal" class="photo-modal hidden" role="dialog" aria-modal="true" aria-label="Billede i stor størrelse">
+    <button id="photoModalClose" class="photo-modal-close" type="button" onclick="closePhotoModal()" aria-label="Luk billedvisning">×</button>
+    <img id="photoModalImage" class="photo-modal-image" alt="Forstørret leveringsbillede">
+    <div id="photoModalCounter" class="photo-modal-counter"></div>
+  </div>
   <div id="updateBanner" class="update-banner hidden">
     Ny version klar — <button class="update-link" onclick="applyAppUpdate()">tryk her</button>
   </div>
@@ -1016,8 +1079,8 @@
   <script>
 'use strict';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyGR3pzqJyuO6gAi1RXfsFB6gIgci3G_lnsUvnCCqwMl9GD3tpHeboqJfT84r6MPhd7/exec';
-const APP_VERSION = '1.24';
-const MAX_PHOTOS = 5;
+const APP_VERSION = '1.25';
+const MAX_PHOTOS = 10;
 const MAX_ORDERS = 20;
 // Keep the existing database and store: v1.21 pending deliveries remain available.
 const DB_NAME = 'leveringsapp_db';
@@ -1268,34 +1331,112 @@ function showCandidates(numbers, mode) {
   panel.append(use, cancel);
 }
 
+// Optimize delivery documentation independently of OCR scanner resolution.
+// Target roughly 120 KiB per photo, allowing a little more for detailed scenes.
+function compressDeliveryPhoto(img) {
+  const maxEdge = Math.max(img.naturalWidth, img.naturalHeight);
+  const options = [
+    [1280, .72], [1280, .60], [1200, .55], [1100, .52],
+    [1024, .50], [950, .47], [850, .44], [750, .42]
+  ];
+  const targetBytes = 125 * 1024;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  let best = '', bestBytes = Infinity, lastWidth = 0, lastHeight = 0;
+  for (const [edge, quality] of options) {
+    const scale = Math.min(1, edge / maxEdge);
+    const width = Math.max(1, Math.round(img.naturalWidth * scale));
+    const height = Math.max(1, Math.round(img.naturalHeight * scale));
+    if (width !== lastWidth || height !== lastHeight) {
+      canvas.width = width; canvas.height = height;
+      ctx.drawImage(img, 0, 0, width, height);
+      lastWidth = width; lastHeight = height;
+    }
+    const dataUrl = canvas.toDataURL('image/jpeg', quality);
+    const bytes = Math.ceil((dataUrl.length - 'data:image/jpeg;base64,'.length) * .75);
+    if (bytes < bestBytes) { best = dataUrl; bestBytes = bytes; }
+    if (bytes <= targetBytes) break;
+  }
+  return best;
+}
+
 async function handlePhotoSelect(event) {
   const file = event.target.files?.[0]; event.target.value = '';
   if (!file || photoBusy || isSaving) return;
-  if (photos.length >= MAX_PHOTOS) { setStatus('cameraStatus', 'Du kan højst tage 5 billeder.', 'error'); return; }
+  if (photos.length >= MAX_PHOTOS) { setStatus('cameraStatus', 'Du kan højst tage 10 billeder.', 'error'); return; }
   photoBusy = true; $('saveBtn').disabled = true; setStatus('cameraStatus', 'Klargør billede…');
   try {
     const img = await loadImageFile(file);
-    photos.push(imageRegionToDataUrl(img, { x:0, y:0, width:img.naturalWidth, height:img.naturalHeight }, 1600, .72));
-    selectedPhotoIndex = photos.length - 1; updatePhotoUI(); setStatus('cameraStatus', 'Billede tilføjet.', 'ok');
+    photos.push(compressDeliveryPhoto(img));
+    selectedPhotoIndex = photos.length - 1;
+    updatePhotoUI(true);
+    setStatus('cameraStatus', 'Billede tilføjet (' + photos.length + '/' + MAX_PHOTOS + ').', 'ok');
   } catch (error) { setStatus('cameraStatus', error.message, 'error'); }
   finally { photoBusy = false; $('saveBtn').disabled = false; }
 }
-function selectPhoto(index) { if (index >= 0 && index < photos.length) { selectedPhotoIndex = index; updatePhotoUI(); } }
-function deleteSelectedPhoto() {
-  if (isSaving || photoBusy || selectedPhotoIndex < 0) return;
-  photos.splice(selectedPhotoIndex, 1); selectedPhotoIndex = Math.min(selectedPhotoIndex, photos.length - 1); updatePhotoUI();
+function deletePhoto(index) {
+  if (isSaving || photoBusy || index < 0 || index >= photos.length) return;
+  if (!confirm('Slet billede ' + (index + 1) + '?')) return;
+  photos.splice(index, 1); // Subsequent images are renumbered automatically.
+  selectedPhotoIndex = photos.length ? Math.min(index, photos.length - 1) : -1;
+  closePhotoModal();
+  updatePhotoUI();
+  setStatus('cameraStatus', 'Billedet er slettet. Rækkefølgen er opdateret.', 'ok');
 }
-function updatePhotoUI() {
-  const preview = $('photoPreview');
-  if (photos.length) { selectedPhotoIndex = Math.max(0, selectedPhotoIndex); preview.src = photos[selectedPhotoIndex]; }
-  else preview.removeAttribute('src');
-  preview.style.display = photos.length ? 'block' : 'none'; $('photoPlaceholder').style.display = photos.length ? 'none' : 'flex';
-  for (let i = 0; i < MAX_PHOTOS; i++) {
-    const thumb = $('thumb' + (i + 1)); thumb.replaceChildren(); thumb.classList.toggle('selected', i === selectedPhotoIndex);
-    if (photos[i]) { const img = document.createElement('img'); img.src = photos[i]; img.alt = 'Billede ' + (i + 1); thumb.append(img); }
-    else thumb.textContent = String(i + 1);
+function openPhotoModal(index) {
+  if (index < 0 || index >= photos.length) return;
+  selectedPhotoIndex = index;
+  $('photoModalImage').src = photos[index];
+  $('photoModalCounter').textContent = 'Billede ' + (index + 1) + ' af ' + photos.length;
+  $('photoModal').classList.remove('hidden');
+  $('photoModalClose').focus();
+}
+function closePhotoModal() {
+  $('photoModal').classList.add('hidden');
+  $('photoModalImage').removeAttribute('src');
+}
+function updatePhotoUI(scrollToNew = false) {
+  const row = $('photoThumbRow');
+  const beforeScrollLeft = row.scrollLeft;
+  row.replaceChildren();
+  $('photoCount').textContent = photos.length + '/' + MAX_PHOTOS;
+  $('photoScrollHelp').classList.toggle('hidden', photos.length <= 5);
+  const slots = Math.min(MAX_PHOTOS, Math.max(5, photos.length));
+  for (let i = 0; i < slots; i++) {
+    const thumb = document.createElement('div');
+    thumb.className = 'thumb';
+    if (photos[i]) {
+      const open = document.createElement('button');
+      open.type = 'button'; open.className = 'thumb-open';
+      open.setAttribute('aria-label', 'Vis billede ' + (i + 1));
+      open.onclick = () => openPhotoModal(i);
+      const img = document.createElement('img');
+      img.src = photos[i]; img.alt = 'Billede ' + (i + 1);
+      open.append(img);
+      const number = document.createElement('span');
+      number.className = 'thumb-index'; number.textContent = String(i + 1);
+      const remove = document.createElement('button');
+      remove.type = 'button'; remove.className = 'thumb-remove'; remove.textContent = '×';
+      remove.setAttribute('aria-label', 'Slet billede ' + (i + 1));
+      remove.onclick = () => deletePhoto(i);
+      thumb.append(open, number, remove);
+    } else {
+      const placeholder = document.createElement('span');
+      placeholder.className = 'thumb-placeholder'; placeholder.textContent = String(i + 1);
+      thumb.append(placeholder);
+    }
+    row.append(thumb);
+  }
+  if (scrollToNew && photos.length > 5) {
+    requestAnimationFrame(() => { row.scrollLeft = row.scrollWidth; });
+  } else {
+    row.scrollLeft = beforeScrollLeft;
   }
 }
+
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && !$('photoModal').classList.contains('hidden')) closePhotoModal();
+});
 
 function goToSignature() {
   if (isSaving || photoBusy) return;
@@ -1379,7 +1520,7 @@ function processPendingQueue() {
     for (const item of items) {
       if (!navigator.onLine) break;
       try {
-        const result = await apiPost('saveDelivery', { payload:item }, 60000);
+        const result = await apiPost('saveDelivery', { payload:item }, 90000);
         if (!result?.ok || !result.folderUrl) throw new Error('Serveren bekræftede ikke lagringen.');
         await deletePendingDelivery(item.id); retryDelay = 10000;
         if (lastSavedId === item.id) { document.querySelector('.registered').textContent = 'Sendt og registreret'; $('registeredDetail').textContent = 'Billeder og kvittering er gemt hos Wallmann.'; }
@@ -1420,7 +1561,7 @@ async function goToRegistered() {
   finally { isSaving = false; $('saveBtn').disabled = false; $('saveOverlay').classList.remove('active'); updateHomeButtons(); }
 }
 function resetAppState() {
-  cancelScan(); closeScanner(); activeDeliveryId = ''; deliveryCreatedAt = ''; stopOrders = []; photos = []; selectedPhotoIndex = -1;
+  cancelScan(); closeScanner(); closePhotoModal(); activeDeliveryId = ''; deliveryCreatedAt = ''; stopOrders = []; photos = []; selectedPhotoIndex = -1;
   $('manualOrderInput').value = ''; clearReceiptData(); dismissCandidates(); renderOrderLists(); updatePhotoUI();
   setStatus('orderStatus', ''); setStatus('cameraStatus', ''); updateHomeButtons();
 }
