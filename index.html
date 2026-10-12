@@ -749,6 +749,63 @@
       width: calc(50% - 5px);
       justify-self: center;
     }
+
+    
+    /* v1.24 – Kameraside med fleksibel scrolling */
+
+    #screen-camera {
+      min-height: 0;
+    }
+
+    #screen-camera .camera-screen-content {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 24px;
+    }
+
+    /* Ingen elementer må presses sammen */
+    #screen-camera .camera-screen-content > * {
+      flex-shrink: 0;
+    }
+
+    /* Ordreboksen vokser efter antal numre */
+    #cameraOrderListCard {
+      height: auto;
+      flex-shrink: 0;
+    }
+
+    /* De fem billedfelter beholder størrelsen */
+    #screen-camera .thumb-row {
+      flex-shrink: 0;
+    }
+
+    /* Billedvisningen beholder sin størrelse */
+    #screen-camera .photo-box {
+      flex-shrink: 0;
+    }
+
+    /* Knapper må aldrig presses sammen */
+    #screen-camera .btn-row {
+      flex-shrink: 0;
+      min-height: 48px;
+    }
+
+    #screen-camera .btn-row .btn {
+      flex-shrink: 0;
+      min-height: 48px;
+    }
+
+    /* Luft mellem handlingerne nederst */
+    #screen-camera .action-row-bottom {
+      margin-top: 8px;
+    }
+
     
   </style>
 </head>
@@ -959,7 +1016,7 @@
   <script>
 'use strict';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyGR3pzqJyuO6gAi1RXfsFB6gIgci3G_lnsUvnCCqwMl9GD3tpHeboqJfT84r6MPhd7/exec';
-const APP_VERSION = '1.23';
+const APP_VERSION = '1.24';
 const MAX_PHOTOS = 5;
 const MAX_ORDERS = 20;
 // Keep the existing database and store: v1.21 pending deliveries remain available.
@@ -1044,6 +1101,11 @@ function goToCamera() {
   if (typed && !stopOrders.includes(typed) && !addCurrentOrder()) return;
   if (!stopOrders.length) { setStatus('orderStatus', 'Tilføj mindst ét nummer.', 'error'); return; }
   $('manualOrderInput').value = ''; closeScanner(); showScreen('screen-camera'); renderOrderLists(); updatePhotoUI();
+  
+    document.querySelector(
+      '#screen-camera .camera-screen-content'
+    ).scrollTop = 0;
+
 }
 
 async function apiPost(action, payload = {}, timeoutMs = 30000, externalSignal) {
