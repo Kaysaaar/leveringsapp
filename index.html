@@ -582,6 +582,8 @@
       transition:transform .12s ease;
     }
 
+    .pending-banner.sent { background:rgba(170, 240, 195, .18); border-color:rgba(170, 240, 195, .55); cursor:default; }
+
     .pending-banner:active{
       transform:scale(0.98);
     }
@@ -1119,7 +1121,7 @@
   <script>
 'use strict';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyGR3pzqJyuO6gAi1RXfsFB6gIgci3G_lnsUvnCCqwMl9GD3tpHeboqJfT84r6MPhd7/exec';
-const APP_VERSION = '2.0';
+const APP_VERSION = '2.1';
 const MAX_PHOTOS = 10;
 const MAX_ORDERS = 20;
 // Keep the existing database and store: v1.21 pending deliveries remain available.
@@ -1131,6 +1133,8 @@ let hasSignature = false, signaturePadReady = false, isDrawing = false;
 let scanMode = 'single', scanBusy = false, scanGeneration = 0, scanAbort = null;
 let scannerStream = null, cameraGeneration = 0;
 let candidates = [], queuePromise = null, retryTimer = null, retryDelay = 10000;
+// Kun UI-status/logning: den eksisterende IndexedDB-kø er stadig den sikre kilde.
+let uploadInProgress = false, lastUploadIssue = '', lastUploadSuccessAt = 0, sentBannerTimer = null;
 let waitingWorker = null, refreshPending = false, refreshing = false;
 let lastSavedId = '';
 const $ = id => document.getElementById(id);
@@ -1553,12 +1557,42 @@ async function dbOperation(mode, operation) {
 function getAllPendingDeliveries() { return dbOperation('readonly', store => store.getAll()); }
 function addPendingDelivery(payload) { return dbOperation('readwrite', store => store.put(payload)); }
 function deletePendingDelivery(id) { return dbOperation('readwrite', store => store.delete(id)); }
+// Vis en stabil status. Antallet kommer altid fra den faktiske, lokale offlinekø.
 async function updatePendingBanner() {
+  const banner = $('pendingBanner');
   try {
     const items = await getAllPendingDeliveries();
-    $('pendingBanner').classList.toggle('hidden', !items.length);
-    $('pendingBanner').textContent = items.length + ' levering' + (items.length === 1 ? '' : 'er') + ' afventer upload · tryk for at prøve igen';
-  } catch (_) { $('pendingBanner').classList.remove('hidden'); $('pendingBanner').textContent = 'Lokal lagring er utilgængelig. Genåbn appen.'; }
+    const n = items.length;
+    banner.classList.toggle('sent', !n && Date.now() - lastUploadSuccessAt < 8000);
+    if (!n) {
+      const justSent = Date.now() - lastUploadSuccessAt < 8000;
+      banner.classList.toggle('hidden', !justSent);
+      banner.textContent = justSent ? 'Levering sendt ✓ · Billeder og kvittering er registreret' : '';
+      return;
+    }
+    banner.classList.remove('sent', 'hidden');
+    const amount = n + ' levering' + (n === 1 ? '' : 'er');
+    if (uploadInProgress) {
+      banner.textContent = 'Sender ' + amount + '… Venter på bekræftelse fra serveren';
+    } else if (!navigator.onLine) {
+      banner.textContent = amount + ' gemt offline · sendes, når forbindelsen er tilbage';
+    } else if (lastUploadIssue) {
+      banner.textContent = amount + ' afventer bekræftelse · prøver igen automatisk (tryk for at prøve nu)';
+    } else {
+      banner.textContent = amount + ' afventer upload · tryk for at prøve nu';
+    }
+  } catch (_) {
+    banner.classList.remove('hidden', 'sent');
+    banner.textContent = 'Lokal lagring er utilgængelig. Genåbn appen.';
+  }
+}
+function showRecentUploadSuccess() {
+  lastUploadSuccessAt = Date.now();
+  clearTimeout(sentBannerTimer);
+  sentBannerTimer = setTimeout(() => {
+    lastUploadSuccessAt = 0;
+    updatePendingBanner();
+  }, 8000);
 }
 function scheduleQueueRetry() {
   if (retryTimer) return;
@@ -1566,6 +1600,7 @@ function scheduleQueueRetry() {
   retryDelay = Math.min(120000, retryDelay * 2);
 }
 function processPendingQueue() {
+  // Et nyt online-event eller tryk på banneret starter aldrig en parallel upload.
   if (queuePromise) return queuePromise;
   queuePromise = (async () => {
     if (!navigator.onLine) return;
@@ -1573,27 +1608,53 @@ function processPendingQueue() {
     items.sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
     for (const item of items) {
       if (!navigator.onLine) break;
+      const started = performance.now();
+      uploadInProgress = true;
+      showUpdateBanner();
+      lastUploadIssue = '';
+      await updatePendingBanner();
       try {
         const result = await apiPost('saveDelivery', { payload:item }, 90000);
         if (!result?.ok || !result.folderUrl) throw new Error('Serveren bekræftede ikke lagringen.');
-        await deletePendingDelivery(item.id); retryDelay = 10000;
-        if (lastSavedId === item.id) { document.querySelector('.registered').textContent = 'Sendt og registreret'; $('registeredDetail').textContent = 'Billeder og kvittering er gemt hos Wallmann.'; }
-      } catch (_) {
-        // Keep this payload and continue, so one invalid old item does not block every delivery.
+        await deletePendingDelivery(item.id); // Slet ALDRIG en levering uden serverbekræftelse.
+        retryDelay = 10000;
+        showRecentUploadSuccess();
+        // Log kun tidsforbrug, ikke billeder, kvittering, ordrenummer eller persondata.
+        console.info('Upload bekræftet', { ms:Math.round(performance.now() - started), alleredeGemt:!!result.alreadySaved });
+        if (lastSavedId === item.id) {
+          document.querySelector('.registered').textContent = 'Sendt og registreret ✓';
+          $('registeredDetail').textContent = 'Billeder og kvittering er gemt hos Wallmann.';
+        }
+      } catch (error) {
+        const ms = Math.round(performance.now() - started);
+        lastUploadIssue = error?.name === 'AbortError' || ms >= 89500 ? 'timeout' : 'netværk/server';
+        console.warn('Upload afventer genforsøg', { ms, type:lastUploadIssue });
+        // Fortsæt med evt. andre leveringer; denne bliver i offlinekøen.
         scheduleQueueRetry();
+      } finally {
+        uploadInProgress = false;
+        showUpdateBanner();
+        await updatePendingBanner();
       }
     }
-  })().catch(() => { scheduleQueueRetry(); }).finally(async () => {
-    queuePromise = null; await updatePendingBanner();
-    // A delivery may have been added while this worker was uploading an older snapshot.
+  })().catch(error => {
+    console.warn('Offlinekø afventer genforsøg', { type:error?.name || 'ukendt' });
+    scheduleQueueRetry();
+  }).finally(async () => {
+    uploadInProgress = false;
+    queuePromise = null;
+    await updatePendingBanner();
+    // En ny levering kan være tilføjet, mens en ældre blev uploadet.
     try { if ((await getAllPendingDeliveries()).length && navigator.onLine) scheduleQueueRetry(); } catch (_) {}
   });
   return queuePromise;
 }
 function retryPendingDeliveries() {
-  if (!navigator.onLine) { $('pendingBanner').textContent = 'Ingen forbindelse. Leveringerne bliver på telefonen.'; return; }
+  if (uploadInProgress || queuePromise) return;
+  if (!navigator.onLine) { updatePendingBanner(); return; }
   clearTimeout(retryTimer); retryTimer = null; retryDelay = 10000;
-  $('pendingBanner').textContent = 'Sender gemte leveringer…'; processPendingQueue();
+  lastUploadIssue = '';
+  processPendingQueue();
 }
 function makeDeliveryPayload() {
   return { id:activeDeliveryId, orderNo:stopOrders[0], allOrders:[...stopOrders], driver:driverSelect.value,
@@ -1609,7 +1670,9 @@ async function goToRegistered() {
     await addPendingDelivery(payload); // The transaction must commit before showing success.
     lastSavedId = payload.id; resetAppState();
     document.querySelector('.registered').textContent = 'Gemt på telefonen';
-    $('registeredDetail').textContent = navigator.onLine ? 'Uploader nu. Du kan fortsætte til næste levering.' : 'Afventer forbindelse. Åbn appen igen, så leveringen kan blive sendt.';
+    $('registeredDetail').textContent = navigator.onLine
+      ? 'Leveringen er gemt på telefonen. Den sendes nu; du kan fortsætte.'
+      : 'Billeder og kvittering er gemt på telefonen. Leveringen sendes automatisk, når forbindelsen er tilbage, mens appen er åben.';
     showScreen('screen-registered'); await updatePendingBanner(); processPendingQueue();
   } catch (_) { setStatus('cameraStatus', 'Kunne ikke gemme på telefonen. Leveringen er stadig her — prøv igen.', 'error'); }
   finally { isSaving = false; $('saveBtn').disabled = false; $('saveOverlay').classList.remove('active'); updateHomeButtons(); }
@@ -1622,16 +1685,16 @@ function resetAppState() {
 
 function showUpdateBanner() {
   $('updateBanner').classList.toggle('hidden', !waitingWorker && !refreshPending);
-  const button = $('updateBanner').querySelector('button'); button.disabled = hasDraft() || isSaving || photoBusy || scanBusy;
+  const button = $('updateBanner').querySelector('button'); button.disabled = hasDraft() || isSaving || photoBusy || scanBusy || uploadInProgress;
   button.textContent = button.disabled ? 'Gem eller kassér kladden først' : 'Opdater app';
 }
 function applyAppUpdate() {
-  if (hasDraft() || isSaving || photoBusy || scanBusy) { showUpdateBanner(); return; }
+  if (hasDraft() || isSaving || photoBusy || scanBusy || uploadInProgress) { showUpdateBanner(); return; }
   if (waitingWorker) waitingWorker.postMessage({ type:'SKIP_WAITING' }); else if (refreshPending) maybeReload();
 }
 function maybeReload() {
   showUpdateBanner();
-  if (refreshPending && !hasDraft() && !isSaving && !photoBusy && !scanBusy && !refreshing) { refreshing = true; location.reload(); }
+  if (refreshPending && !hasDraft() && !isSaving && !photoBusy && !scanBusy && !uploadInProgress && !refreshing) { refreshing = true; location.reload(); }
 }
 try { const driver = localStorage.getItem('leveringsapp_driver'); if (driver) driverSelect.value = driver; } catch (_) {}
 driverSelect.addEventListener('change', () => { try { localStorage.setItem('leveringsapp_driver', driverSelect.value); } catch (_) {} updateHomeButtons(); });
