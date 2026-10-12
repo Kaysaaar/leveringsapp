@@ -780,12 +780,12 @@
       flex-shrink: 0;
     }
 
-    /* De fem billedfelter beholder størrelsen */
+    /* Billedfelterne beholder deres størrelse */
     #screen-camera .thumb-row {
       flex-shrink: 0;
     }
 
-    /* Billedvisningen beholder sin størrelse */
+    /* Ældre forhåndsvisningsfelt er ikke længere i brug */
     #screen-camera .photo-box {
       flex-shrink: 0;
     }
@@ -808,7 +808,7 @@
 
     
 
-    /* v1.25 – Swipebare billedminiaturer, separat sletning og fuldskærmsvisning. */
+    /* v2.0 – To 9:16-billeder ad gangen med swipe og forstørrelse. */
     #screen-camera .photo-strip-heading {
       display:flex; align-items:center; justify-content:space-between;
       flex-shrink:0; font-size:14px; font-weight:700;
@@ -817,24 +817,35 @@
     #screen-camera #photoCount {font-weight:600; opacity:.8;}
     #screen-camera #photoThumbRow {
       display:flex; flex-direction:row; flex-wrap:nowrap; align-items:stretch;
-      gap:8px; width:100%; overflow-x:auto; overflow-y:hidden;
+      gap:10px; width:100%; overflow-x:auto; overflow-y:hidden;
       padding:4px 2px 10px; scroll-snap-type:x proximity;
       -webkit-overflow-scrolling:touch; touch-action:pan-x pan-y;
       scrollbar-width:thin; flex-shrink:0;
     }
     #screen-camera #photoThumbRow .thumb {
-      position:relative; flex:0 0 calc((100% - 32px) / 5);
-      width:calc((100% - 32px) / 5); height:auto;
-      aspect-ratio:3/4; min-height:70px; padding:0;
+      position:relative;
+      flex:0 0 calc((100% - 10px) / 2);
+      width:calc((100% - 10px) / 2);
+      aspect-ratio:9 / 16;
+      min-height:0; height:auto; padding:0;
       scroll-snap-align:start; overflow:hidden;
+      background:#142920;
     }
     #screen-camera .thumb-open {
       position:absolute; inset:0; width:100%; height:100%; border:0;
       background:transparent; padding:0; margin:0; cursor:pointer;
     }
-    #screen-camera .thumb-open img {width:100%; height:100%; object-fit:cover; border-radius:8px; display:block;}
+    /* Bevar hele motivet – også hvis chaufføren tager et liggende billede. */
+    #screen-camera .thumb-open img {
+      width:100%; height:100%; object-fit:contain;
+      border-radius:8px; display:block;
+    }
     #screen-camera .thumb-open:focus-visible {outline:2px solid #b4efc5; outline-offset:-2px;}
-    #screen-camera .thumb-placeholder {font-weight:700; opacity:.7;}
+    #screen-camera .thumb-placeholder {
+      display:flex; align-items:center; justify-content:center;
+      width:100%; height:100%; padding:8px;
+      font-size:16px; font-weight:700; opacity:.7; text-align:center;
+    }
     #screen-camera .thumb-index {
       position:absolute; left:4px; bottom:4px; background:rgba(0,0,0,.66);
       color:white; padding:2px 5px; border-radius:5px;
@@ -858,6 +869,35 @@
       text-align:center;
     }
     #screen-camera .camera-actions .camera-main-btn {padding:12px 4px;}
+    /* Ens knapper: begge rækker deler præcis samme to kolonner og højde.
+       Det gælder både <button> og <label> til telefonens kamera. */
+    #screen-camera .camera-actions,
+    #screen-camera .action-row-bottom {
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      column-gap:10px;
+      width:100%;
+      align-items:stretch;
+    }
+    #screen-camera .camera-actions > .btn,
+    #screen-camera .action-row-bottom > .btn {
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex:none;
+      box-sizing:border-box;
+      width:100%;
+      min-width:0;
+      height:56px;
+      min-height:56px;
+      max-height:56px;
+      padding:8px 6px;
+      margin:0;
+      font-size:clamp(15px,4vw,18px);
+      line-height:1.15;
+      white-space:nowrap;
+      text-align:center;
+    }
     .photo-modal {
       position:fixed; inset:0; z-index:10002; padding:
         calc(56px + env(safe-area-inset-top)) 12px
@@ -978,10 +1018,10 @@
 
         <div class="photo-strip-heading">
           <span>Billeder</span>
-          <span id="photoCount" aria-live="polite">0/10</span>
+          <span id="photoCount" aria-live="polite">0/10 billeder</span>
         </div>
-        <div id="photoThumbRow" class="thumb-row" aria-label="Billeder af leveringen – swipe vandret for flere"></div>
-        <div id="photoScrollHelp" class="photo-scroll-help hidden">Swipe til siden for flere billeder ↔</div>
+        <div id="photoThumbRow" class="thumb-row" aria-label="Billeder af leveringen – to stående billeder ad gangen, swipe vandret for flere"></div>
+        <div id="photoScrollHelp" class="photo-scroll-help hidden">Swipe for at se tidligere billeder ↔</div>
 
         <input
           id="photoInput"
@@ -1079,7 +1119,7 @@
   <script>
 'use strict';
 const API_URL = 'https://script.google.com/macros/s/AKfycbyGR3pzqJyuO6gAi1RXfsFB6gIgci3G_lnsUvnCCqwMl9GD3tpHeboqJfT84r6MPhd7/exec';
-const APP_VERSION = '1.25';
+const APP_VERSION = '2.0';
 const MAX_PHOTOS = 10;
 const MAX_ORDERS = 20;
 // Keep the existing database and store: v1.21 pending deliveries remain available.
@@ -1380,7 +1420,8 @@ function deletePhoto(index) {
   photos.splice(index, 1); // Subsequent images are renumbered automatically.
   selectedPhotoIndex = photos.length ? Math.min(index, photos.length - 1) : -1;
   closePhotoModal();
-  updatePhotoUI();
+  // Efter sletning: vis billede lige før det slettede og det næste.
+  updatePhotoUI(false, Math.max(0, index - 1));
   setStatus('cameraStatus', 'Billedet er slettet. Rækkefølgen er opdateret.', 'ok');
 }
 function openPhotoModal(index) {
@@ -1395,20 +1436,21 @@ function closePhotoModal() {
   $('photoModal').classList.add('hidden');
   $('photoModalImage').removeAttribute('src');
 }
-function updatePhotoUI(scrollToNew = false) {
+function updatePhotoUI(scrollToNew = false, focusStartIndex = null) {
   const row = $('photoThumbRow');
   const beforeScrollLeft = row.scrollLeft;
   row.replaceChildren();
-  $('photoCount').textContent = photos.length + '/' + MAX_PHOTOS;
-  $('photoScrollHelp').classList.toggle('hidden', photos.length <= 5);
-  const slots = Math.min(MAX_PHOTOS, Math.max(5, photos.length));
+  $('photoCount').textContent = photos.length + '/' + MAX_PHOTOS + ' billeder';
+  $('photoScrollHelp').classList.toggle('hidden', photos.length <= 2);
+  // Vis kun to tomme felter til at begynde med. Derefter vises de optagne billeder.
+  const slots = Math.min(MAX_PHOTOS, Math.max(2, photos.length));
   for (let i = 0; i < slots; i++) {
     const thumb = document.createElement('div');
     thumb.className = 'thumb';
     if (photos[i]) {
       const open = document.createElement('button');
       open.type = 'button'; open.className = 'thumb-open';
-      open.setAttribute('aria-label', 'Vis billede ' + (i + 1));
+      open.setAttribute('aria-label', 'Vis billede ' + (i + 1) + ' stort');
       open.onclick = () => openPhotoModal(i);
       const img = document.createElement('img');
       img.src = photos[i]; img.alt = 'Billede ' + (i + 1);
@@ -1422,13 +1464,25 @@ function updatePhotoUI(scrollToNew = false) {
       thumb.append(open, number, remove);
     } else {
       const placeholder = document.createElement('span');
-      placeholder.className = 'thumb-placeholder'; placeholder.textContent = String(i + 1);
+      placeholder.className = 'thumb-placeholder';
+      placeholder.textContent = 'Billede ' + (i + 1);
       thumb.append(placeholder);
     }
     row.append(thumb);
   }
-  if (scrollToNew && photos.length > 5) {
-    requestAnimationFrame(() => { row.scrollLeft = row.scrollWidth; });
+
+  // Automatisk til nyeste to, HVER gang et billede tilføjes (fra nr. 3).
+  // Når chaufføren blot swiper eller åbner popup'en, rykker rækken sig ikke.
+  if (scrollToNew) {
+    requestAnimationFrame(() => {
+      const target = Math.max(0, row.scrollWidth - row.clientWidth);
+      row.scrollTo({ left:target, behavior:'smooth' });
+    });
+  } else if (focusStartIndex !== null) {
+    requestAnimationFrame(() => {
+      const first = row.children[Math.min(focusStartIndex, row.children.length - 1)];
+      row.scrollLeft = first ? first.offsetLeft - row.children[0].offsetLeft : 0;
+    });
   } else {
     row.scrollLeft = beforeScrollLeft;
   }
