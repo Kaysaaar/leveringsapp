@@ -20,3 +20,6 @@ body{min-height:100vh;min-height:100dvh;overflow:visible}
 html:has(body.at-home){background:#17352d;background:linear-gradient(90deg,#17352d,#203b33)}
 body.at-home{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
 .at-home .app,.at-home:has(.draft-status:not(:empty)) .app{flex:1 0 auto;min-height:0;padding:calc(24px + env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left))}
+
+/* Keep the root canvas green from the first paint, before load/restoreDraft. */
+html{background-color:#17352d;background-image:linear-gradient(90deg,#17352d,#203b33)}

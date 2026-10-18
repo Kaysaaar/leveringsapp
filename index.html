@@ -2,6 +2,7 @@
 <html lang="da">
 <head>
   <meta charset="utf-8">
+  <meta name="theme-color" content="#17352d">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Leveringsapp</title>
   <link rel="manifest" href="./manifest.json">
@@ -925,8 +926,8 @@
 <link rel="stylesheet" href="design.css">
 <script src="config.js"></script>
 </head>
-<body>
-  <div class="preview-ribbon" id="previewRibbon">FORHÅNDSVISNING <span>· Ingen leveringer sendes</span></div>
+<body class="at-home">
+  <div class="preview-ribbon" id="previewRibbon" hidden>FORHÅNDSVISNING <span>· Ingen leveringer sendes</span></div>
   <header class="brand-header"><a href="index.html" aria-label="Wallmann forside"><img src="wallmann-logo.png" alt="Wallmann"></a><span>Levering & dokumentation</span></header>
   <div id="draftStatus" class="draft-status" role="status" aria-live="polite"></div>
   <div class="app">
@@ -1132,7 +1133,7 @@
 'use strict';
 const PREVIEW = window.APP_CONFIG.preview !== false;
 const API_URL = PREVIEW ? '' : window.APP_CONFIG.apiUrl;
-const APP_VERSION = PREVIEW ? '3.0.1 · forhåndsvisning' : '3.0.1';
+const APP_VERSION = PREVIEW ? '3.0.2 · forhåndsvisning' : '3.0.2';
 const MAX_PHOTOS = 10;
 const MAX_ORDERS = 20;
 // Keep the existing database and store: v1.21 pending deliveries remain available.
