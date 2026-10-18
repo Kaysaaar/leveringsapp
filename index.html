@@ -2,9 +2,9 @@
 <html lang="da">
 <head>
   <meta charset="utf-8">
-  <meta name="theme-color" content="#17352d">
-  <meta name="color-scheme" content="dark">
-  <style>html{background:#17352d;color-scheme:dark}body{color-scheme:light}</style>
+  <meta name="theme-color" content="#f3f5ef">
+  <meta name="color-scheme" content="light">
+  <style>html{background:#f3f5ef;color-scheme:light}body{color-scheme:light}</style>
   <script>
     // Set before first layout; iOS also exposes standalone on navigator.
     if (navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches) {
@@ -18,7 +18,7 @@
   
   
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <style>
     :root{
       --bg1:#17352d;
@@ -1141,7 +1141,7 @@
 'use strict';
 const PREVIEW = window.APP_CONFIG.preview !== false;
 const API_URL = PREVIEW ? '' : window.APP_CONFIG.apiUrl;
-const APP_VERSION = PREVIEW ? '3.0.3 · forhåndsvisning' : '3.0.3';
+const APP_VERSION = PREVIEW ? '3.0.4 · forhåndsvisning' : '3.0.4';
 const MAX_PHOTOS = 10;
 const MAX_ORDERS = 20;
 // Keep the existing database and store: v1.21 pending deliveries remain available.

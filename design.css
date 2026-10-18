@@ -31,3 +31,22 @@ body{color-scheme:light}
    Use the stable viewport height only in the installed app; keep normal Safari dynamic. */
 html.installed-app body{min-height:100vh}
 html.installed-app body.at-home{min-height:100vh}
+
+/* 3.0.4: one high-contrast daylight palette throughout the driver app. */
+html,html:has(body.at-home),body,body.at-home{background:#f3f5ef;color:#173e33;color-scheme:light}
+.brand-header{background:#f3f5ef;color:#173e33;border-bottom:1px solid #cbd6cb}
+.home-logo,.brand-header img{filter:brightness(0) saturate(100%) invert(19%) sepia(20%) saturate(1100%) hue-rotate(108deg) brightness(91%) contrast(91%)}
+.at-home .home-logo-subtitle{color:#173e33}
+.at-home .dropdown{background-color:#fff;color:#173e33;border:1px solid #899e91}
+.at-home #newDeliveryBtn{background:#204d3b;color:#fff}
+.delivery-totals,.monthly-total{color:#173e33}
+.delivery-totals span,.monthly-total>span,.monthly-total small,.totals-note,.at-home .bottom-version,.bottom-version,.at-home .text-button{color:#4b6357}
+.delivery-totals>div+div{border-color:#a6b8aa}
+.at-home .draft-status{color:#31532b}
+.at-home .draft-status.error{color:#8d2b16;background:#fff1e9}
+.directory-note{color:#754514}
+.helper,.small-label,.step-label{color:#4b6357}
+.dropdown,.manual-input,.receiver-input{border-color:#899e91}
+
+#screen-camera .thumb-placeholder{color:#4b6357;opacity:1}
+input::placeholder{color:#52665a;opacity:1}
