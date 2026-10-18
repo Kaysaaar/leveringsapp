@@ -982,7 +982,7 @@
         <div class="step-label">1 · Følgesedler</div>
         <h1>Hvilken levering?</h1>
         <button id="scanSingleBtn" class="btn primary" onclick="openOrderScanner('single')">Scan nummer</button>
-        <button id="scanMultiBtn" class="btn secondary" onclick="openOrderScanner('multi')">Multi-levering</button>
+        <button id="scanMultiBtn" class="btn primary" onclick="openOrderScanner('multi')">Multi-levering</button>
         <p class="helper">Multi: Læg nummerfelterne under hinanden. Billeder og kvittering gælder alle valgte numre.</p>
 
         <input
@@ -1115,8 +1115,8 @@
         <div id="scanFrame" class="scan-frame"><span>Nummerfelt</span></div>
       </div>
       <p id="scannerStatus" role="status">Starter kamera…</p>
-      <button id="captureScanBtn" class="btn primary" onclick="captureOrderScan()" disabled>Aflæs nummer</button>
-      <button class="btn secondary" onclick="useNativeScanner()">Brug telefonens kamera / vælg foto</button>
+      <button id="captureScanBtn" class="btn secondary" onclick="captureOrderScan()" disabled>Aflæs nummer</button>
+      <button class="btn primary" onclick="useNativeScanner()">Brug telefonens kamera / vælg foto</button>
       <button class="text-button" onclick="closeScanner()">Annuller</button>
     </div>
   </div>
@@ -1142,7 +1142,7 @@
 'use strict';
 const PREVIEW = window.APP_CONFIG.preview !== false;
 const API_URL = PREVIEW ? '' : window.APP_CONFIG.apiUrl;
-const APP_VERSION = PREVIEW ? '3.0.6 · forhåndsvisning' : '3.0.6';
+const APP_VERSION = PREVIEW ? '3.0.7 · forhåndsvisning' : '3.0.7';
 const MAX_PHOTOS = 10;
 const MAX_ORDERS = 20;
 // Keep the existing database and store: v1.21 pending deliveries remain available.
