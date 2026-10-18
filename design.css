@@ -50,3 +50,6 @@ html,html:has(body.at-home),body,body.at-home{background:#f3f5ef;color:#173e33;c
 
 #screen-camera .thumb-placeholder{color:#4b6357;opacity:1}
 input::placeholder{color:#52665a;opacity:1}
+
+/* 3.0.5: keep the step header below the iPhone status area. */
+body:not(.at-home) .brand-header{height:calc(50px + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px);padding-left:max(16px,calc((100vw - 508px)/2),env(safe-area-inset-left,0px));padding-right:max(16px,calc((100vw - 508px)/2),env(safe-area-inset-right,0px));flex-shrink:0}
