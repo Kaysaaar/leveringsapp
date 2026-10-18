@@ -13,3 +13,10 @@ body:not(.at-home) .brand-header{height:50px;padding:0 max(16px,calc((100vw - 50
 .monthly-total{display:flex;align-items:center;justify-content:center;gap:13px;margin:22px 0 0;color:#dce8dc}.monthly-total strong{font-size:29px;font-weight:600;letter-spacing:-1px;font-variant-numeric:tabular-nums}.monthly-total>span{font-size:12px;line-height:1.5}.monthly-total small{display:block;font-size:9px;color:#9eb4a5}.directory-note{font-size:11px;color:#edd7ab;text-align:center;line-height:1.5}.directory-note:not(:empty){margin-top:12px}@media(max-height:700px){.monthly-total{margin-top:16px}.monthly-total strong{font-size:26px}}
 
 .delivery-totals{display:flex;justify-content:center;align-items:center;gap:0;margin-top:22px;color:#deeadf}.delivery-totals>div{min-width:120px;text-align:center;padding:0 20px}.delivery-totals>div+div{border-left:1px solid #ffffff26}.delivery-totals strong{display:block;font-size:26px;line-height:1.2;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.7px}.delivery-totals span{display:block;font-size:10px;margin-top:4px;color:#b9ccbe}.totals-note{font-size:9px;color:#9bb1a2;text-align:center;margin-top:10px}.at-home .bottom-version{margin-top:18px}@media(max-height:700px){.delivery-totals{margin-top:16px}.delivery-totals strong{font-size:24px}}
+
+/* One document scroll area; paint the iPhone safe area like the home screen. */
+html{min-height:100%;overflow-x:hidden;overflow-y:auto}
+body{min-height:100vh;min-height:100dvh;overflow:visible}
+html:has(body.at-home){background:#17352d;background:linear-gradient(90deg,#17352d,#203b33)}
+body.at-home{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+.at-home .app,.at-home:has(.draft-status:not(:empty)) .app{flex:1 0 auto;min-height:0;padding:calc(24px + env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left))}
