@@ -973,7 +973,7 @@
       <button id="discardBtn" class="text-button hidden" onclick="discardDelivery()">Kassér kladde</button>
       <div id="driverDirectoryNote" class="directory-note" role="status"></div>
       <div class="delivery-totals" aria-label="Leveringer for alle chauffører"><div><strong id="monthTotal">—</strong><span>Denne måned</span></div><div><strong id="yearTotal">—</strong><span>I år</span></div></div><div class="totals-note" id="monthNote">Leveringer · alle chauffører</div>
-      <div class="app-version bottom-version">Version <span id="appVersionText"></span></div>
+      
     </section>
 
     <section id="screen-order" class="screen">
@@ -1100,7 +1100,7 @@
     <section id="screen-registered" class="screen">
       <div class="check-wrap">
         <div class="check">✓</div>
-        <div class="registered">Gemt på telefonen</div><p id="registeredDetail">Afventer upload. Du kan fortsætte.</p><button class="btn primary" onclick="goToHome()">Fortsæt</button>
+        <div class="registered">Gemt på telefonen</div><p id="registeredDetail">Sendes til Wallmann. Hold appen åben.</p><button class="btn primary" onclick="goToHome()">Fortsæt</button>
       </div>
     </section>
 
@@ -1125,6 +1125,7 @@
     <img id="photoModalImage" class="photo-modal-image" alt="Forstørret leveringsbillede">
     <div id="photoModalCounter" class="photo-modal-counter"></div>
   </div>
+  <div class="app-version bottom-version home-version">Version <span id="appVersionText"></span></div>
   <div id="updateBanner" class="update-banner hidden">
     Ny version klar — <button class="update-link" onclick="applyAppUpdate()">tryk her</button>
   </div>
@@ -1133,7 +1134,7 @@
     <div class="save-card">
       <div class="spinner"></div>
       <div class="save-title">Gemmer...</div>
-      <div class="save-text">Sikrer leveringen på telefonen</div>
+      <div class="save-text">Gemmer billeder og kvittering på telefonen</div>
     </div>
   </div>
 
@@ -1141,7 +1142,7 @@
 'use strict';
 const PREVIEW = window.APP_CONFIG.preview !== false;
 const API_URL = PREVIEW ? '' : window.APP_CONFIG.apiUrl;
-const APP_VERSION = PREVIEW ? '3.0.5 · forhåndsvisning' : '3.0.5';
+const APP_VERSION = PREVIEW ? '3.0.6 · forhåndsvisning' : '3.0.6';
 const MAX_PHOTOS = 10;
 const MAX_ORDERS = 20;
 // Keep the existing database and store: v1.21 pending deliveries remain available.
@@ -1597,24 +1598,24 @@ async function updatePendingBanner() {
     if (!n) {
       const justSent = Date.now() - lastUploadSuccessAt < 8000;
       banner.classList.toggle('hidden', !justSent);
-      banner.textContent = justSent ? 'Levering sendt ✓ · Billeder og kvittering er registreret' : '';
+      banner.textContent = justSent ? 'Leveringen er sendt ✓ · Modtaget hos Wallmann' : '';
       return;
     }
     banner.classList.remove('sent', 'hidden');
     if (PREVIEW) { banner.textContent = n + ' testlevering' + (n === 1 ? '' : 'er') + ' gemt lokalt · sendes ikke'; return; }
     const amount = n + ' levering' + (n === 1 ? '' : 'er');
     if (uploadInProgress) {
-      banner.textContent = 'Sender ' + amount + '… Venter på bekræftelse fra serveren';
+      banner.textContent = 'Sender ' + amount + '… Hold appen åben.';
     } else if (!navigator.onLine) {
-      banner.textContent = amount + ' gemt offline · sendes, når forbindelsen er tilbage';
+      banner.textContent = amount + ' på telefonen. Sendes, når der er forbindelse. Hold appen åben.';
     } else if (lastUploadIssue) {
-      banner.textContent = amount + ' afventer bekræftelse · prøver igen automatisk (tryk for at prøve nu)';
+      banner.textContent = amount + ' mangler at blive sendt. Vi prøver igen. Hold appen åben — eller tryk her for at prøve nu.';
     } else {
-      banner.textContent = amount + ' afventer upload · tryk for at prøve nu';
+      banner.textContent = amount + ' klar til at blive sendt. Tryk her for at sende.';
     }
   } catch (_) {
     banner.classList.remove('hidden', 'sent');
-    banner.textContent = 'Lokal lagring er utilgængelig. Genåbn appen.';
+    banner.textContent = 'Appen kan ikke læse de gemte leveringer. Luk og åbn appen igen. Kontakt kontoret, hvis det fortsætter.';
   }
 }
 function showRecentUploadSuccess() {
@@ -1654,13 +1655,17 @@ function processPendingQueue() {
         // Log kun tidsforbrug, ikke billeder, kvittering, ordrenummer eller persondata.
         console.info('Upload bekræftet', { ms:Math.round(performance.now() - started), alleredeGemt:!!result.alreadySaved });
         if (lastSavedId === item.id) {
-          document.querySelector('.registered').textContent = 'Sendt og registreret ✓';
-          $('registeredDetail').textContent = 'Billeder og kvittering er gemt hos Wallmann.';
+          document.querySelector('.registered').textContent = 'Leveringen er sendt ✓';
+          $('registeredDetail').textContent = 'Wallmann har modtaget leveringen. Du kan fortsætte.';
         }
       } catch (error) {
         const ms = Math.round(performance.now() - started);
         lastUploadIssue = error?.name === 'AbortError' || ms >= 89500 ? 'timeout' : 'netværk/server';
         console.warn('Upload afventer genforsøg', { ms, type:lastUploadIssue });
+        if (lastSavedId === item.id) {
+          document.querySelector('.registered').textContent = 'Gemt på telefonen';
+          $('registeredDetail').textContent = 'Leveringen er ikke sendt endnu. Dine billeder er gemt på telefonen. Vi prøver igen automatisk — hold appen åben.';
+        }
         // Fortsæt med evt. andre leveringer; denne bliver i offlinekøen.
         scheduleQueueRetry();
       } finally {
@@ -1705,8 +1710,8 @@ async function goToRegistered() {
     lastSavedId = payload.id; resetAppState();
     document.querySelector('.registered').textContent = 'Gemt på telefonen';
     $('registeredDetail').textContent = navigator.onLine
-      ? 'Leveringen er gemt på telefonen. Den sendes nu; du kan fortsætte.'
-      : 'Billeder og kvittering er gemt på telefonen. Leveringen sendes automatisk, når forbindelsen er tilbage, mens appen er åben.';
+      ? 'Sender til Wallmann. Hold appen åben. Du kan godt starte næste levering.'
+      : 'Ingen forbindelse lige nu. Leveringen er gemt på telefonen og sendes automatisk, når der er forbindelse. Hold appen åben.';
     if (PREVIEW) { document.querySelector('.registered').textContent = 'Testlevering gemt'; $('registeredDetail').textContent = 'Kun gemt i denne forhåndsvisning. Intet er sendt til Wallmanns ark eller Drev.'; }
     showScreen('screen-registered'); await updatePendingBanner(); processPendingQueue();
   } catch (_) { setStatus('cameraStatus', 'Kunne ikke gemme på telefonen. Leveringen er stadig her — prøv igen.', 'error'); }

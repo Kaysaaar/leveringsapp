@@ -19,9 +19,7 @@ function renderHomeData() {
   if(!summary || summary.month!==homeMonth() || !Number.isInteger(summary.total) || summary.total<0 || !Number.isFinite(Date.parse(summary.asOf))) {value.textContent='—';$('yearTotal').textContent='—';note.textContent=navigator.onLine?'Henter i baggrunden':'Opdateres, når der er forbindelse';return;}
   value.textContent=new Intl.NumberFormat('da-DK').format(summary.total);
   $('yearTotal').textContent=Number.isInteger(summary.yearTotal)?new Intl.NumberFormat('da-DK').format(summary.yearTotal):'—';
-  const time=new Intl.DateTimeFormat('da-DK',{timeZone:'Europe/Copenhagen',hour:'2-digit',minute:'2-digit'}).format(new Date(summary.asOf));
-  const stale=Date.now()-Date.parse(summary.asOf)>6*60*1000;
-  note.textContent=PREVIEW?'Eksempeltal · alle chauffører':(stale?'Senest hentet':'Opdateret')+' '+time+(navigator.onLine?'':' · offline');
+  note.textContent=PREVIEW?'Eksempeltal · alle chauffører':'';
 }
 async function refreshHomeData(force=false) {
   if(homeRequest || document.hidden || !navigator.onLine || isSaving || photoBusy || scanBusy || uploadInProgress)return;
