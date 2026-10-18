@@ -6,6 +6,8 @@
   <title>Leveringsapp</title>
   <link rel="manifest" href="./manifest.json">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+  
+  
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <style>
@@ -920,8 +922,13 @@
     }
 
   </style>
+<link rel="stylesheet" href="design.css">
+<script src="config.js"></script>
 </head>
 <body>
+  <div class="preview-ribbon" id="previewRibbon">FORHÅNDSVISNING <span>· Ingen leveringer sendes</span></div>
+  <header class="brand-header"><a href="index.html" aria-label="Wallmann forside"><img src="wallmann-logo.png" alt="Wallmann"></a><span>Levering & dokumentation</span></header>
+  <div id="draftStatus" class="draft-status" role="status" aria-live="polite"></div>
   <div class="app">
 
     <section id="screen-home" class="screen active">
@@ -955,6 +962,8 @@
 
       <button id="newDeliveryBtn" class="btn primary" onclick="startDelivery()" disabled>Ny levering</button>
       <button id="discardBtn" class="text-button hidden" onclick="discardDelivery()">Kassér kladde</button>
+      <div id="driverDirectoryNote" class="directory-note" role="status"></div>
+      <div class="delivery-totals" aria-label="Leveringer for alle chauffører"><div><strong id="monthTotal">—</strong><span>Denne måned</span></div><div><strong id="yearTotal">—</strong><span>I år</span></div></div><div class="totals-note" id="monthNote">Leveringer · alle chauffører</div>
       <div class="app-version bottom-version">Version <span id="appVersionText"></span></div>
     </section>
 
@@ -1121,12 +1130,13 @@
 
   <script>
 'use strict';
-const API_URL = 'https://script.google.com/macros/s/AKfycbyGR3pzqJyuO6gAi1RXfsFB6gIgci3G_lnsUvnCCqwMl9GD3tpHeboqJfT84r6MPhd7/exec';
-const APP_VERSION = '2.2';
+const PREVIEW = window.APP_CONFIG.preview !== false;
+const API_URL = PREVIEW ? '' : window.APP_CONFIG.apiUrl;
+const APP_VERSION = PREVIEW ? '3.0 · forhåndsvisning' : '3.0';
 const MAX_PHOTOS = 10;
 const MAX_ORDERS = 20;
 // Keep the existing database and store: v1.21 pending deliveries remain available.
-const DB_NAME = 'leveringsapp_db';
+const DB_NAME = PREVIEW ? 'leveringsapp_preview_queue' : 'leveringsapp_db';
 const STORE_PENDING = 'pendingDeliveries';
 let stopOrders = [], photos = [], selectedPhotoIndex = -1;
 let activeDeliveryId = '', deliveryCreatedAt = '', isSaving = false, photoBusy = false;
@@ -1138,6 +1148,7 @@ let candidates = [], queuePromise = null, retryTimer = null, retryDelay = 10000;
 let uploadInProgress = false, lastUploadIssue = '', lastUploadSuccessAt = 0, sentBannerTimer = null;
 let waitingWorker = null, refreshPending = false, refreshing = false;
 let lastSavedId = '';
+let activeDriver = '', draftReady = false, restoringDraft = false;
 const $ = id => document.getElementById(id);
 const driverSelect = $('driverSelect');
 const validOrder = value => /^\d{6}$/.test(value);
@@ -1145,11 +1156,13 @@ function pulseHaptic(ms = 14) { try { navigator.vibrate?.(ms); } catch (_) {} }
 function setStatus(id, text, type = '') { $(id).textContent = text; $(id).className = 'status ' + type; }
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(el => el.classList.toggle('active', el.id === id));
+  document.body.classList.toggle('at-home', id === 'screen-home');
   updateHomeButtons();
 }
 function hasDraft() { return !!activeDeliveryId; }
 function updateHomeButtons() {
-  $('newDeliveryBtn').disabled = !driverSelect.value || isSaving;
+  $('newDeliveryBtn').disabled = !draftReady || !driverSelect.value || isSaving;
+  driverSelect.disabled = !draftReady || hasDraft();
   $('newDeliveryBtn').textContent = hasDraft() ? 'Fortsæt levering' : 'Ny levering';
   $('discardBtn').classList.toggle('hidden', !hasDraft());
   showUpdateBanner();
@@ -1158,8 +1171,8 @@ function makeId() {
   return 'delivery_' + (globalThis.crypto?.randomUUID ? crypto.randomUUID() : Date.now() + '_' + Math.random().toString(36).slice(2, 12));
 }
 function startDelivery() {
-  if (!driverSelect.value || isSaving) return;
-  if (!activeDeliveryId) { activeDeliveryId = makeId(); deliveryCreatedAt = new Date().toISOString(); }
+  if (!draftReady || !driverSelect.value || isSaving) return;
+  if (!activeDeliveryId) { activeDeliveryId = makeId(); activeDriver = driverSelect.value; deliveryCreatedAt = new Date().toISOString(); }
   goToOrder();
 }
 function goToHome() {
@@ -1171,9 +1184,12 @@ function goToOrder() {
   if (isSaving || photoBusy) return;
   closeScanner(); showScreen('screen-order'); renderOrderLists();
 }
-function discardDelivery() {
+async function discardDelivery() {
   if (isSaving || !confirm('Kassér denne kladde med billeder og kvittering?')) return;
-  resetAppState(); goToHome();
+  isSaving = true;
+  try { await draftWrites; await draftStore('readwrite', store => store.delete('current')); resetAppState(); }
+  catch (_) { draftMessage('Kladden kunne ikke slettes. Prøv igen.', true); }
+  finally { isSaving = false; goToHome(); updateHomeButtons(); }
 }
 function handleManualInput() {
   $('manualOrderInput').value = $('manualOrderInput').value.replace(/\D/g, '').slice(0, 6);
@@ -1217,6 +1233,7 @@ function goToCamera() {
 }
 
 async function apiPost(action, payload = {}, timeoutMs = 30000, externalSignal) {
+  if (PREVIEW) throw new Error('Forhåndsvisning: scanning og upload er ikke forbundet til driften. Indtast nummeret manuelt.');
   const controller = new AbortController();
   const abort = () => controller.abort();
   externalSignal?.addEventListener('abort', abort, { once:true });
@@ -1339,7 +1356,7 @@ async function runScan(imageDataUrl, mode, prepareMs = 0) {
     console.info('Scan timing', { mode, prepareMs:Math.round(prepareMs), requestMs:Math.round(performance.now() - started), visionMs:result.timings?.visionMs, bytesApprox:Math.round(imageDataUrl.length * .75) });
     if (!numbers.length) { setStatus('orderStatus', 'Intet nummer fundet. Prøv tættere på eller indtast manuelt.', 'error'); return; }
     if (mode === 'single' && numbers.length === 1) {
-      $('manualOrderInput').value = numbers[0];
+      $('manualOrderInput').value = numbers[0]; persistDraft();
       setStatus('orderStatus', 'Nummer fundet — kontrollér og ret feltet om nødvendigt.', 'ok');
     } else {
       showCandidates(numbers, mode);
@@ -1377,14 +1394,14 @@ function showCandidates(numbers, mode) {
 }
 
 // Optimize delivery documentation independently of OCR scanner resolution.
-// Target roughly 120 KiB per photo, allowing a little more for detailed scenes.
+// Preserve labels and damage detail: target 400 KiB, retain at least a 1600px edge
+// for large sources, and never reduce JPEG quality below .70. No upscaling.
 function compressDeliveryPhoto(img) {
   const maxEdge = Math.max(img.naturalWidth, img.naturalHeight);
   const options = [
-    [1280, .72], [1280, .60], [1200, .55], [1100, .52],
-    [1024, .50], [950, .47], [850, .44], [750, .42]
+    [1920, .82], [1920, .75], [1600, .78], [1600, .70]
   ];
-  const targetBytes = 125 * 1024;
+  const targetBytes = 400 * 1024;
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   let best = '', bestBytes = Infinity, lastWidth = 0, lastHeight = 0;
@@ -1402,6 +1419,9 @@ function compressDeliveryPhoto(img) {
     if (bytes < bestBytes) { best = dataUrl; bestBytes = bytes; }
     if (bytes <= targetBytes) break;
   }
+  // Ten images plus signature remain below the existing 22M-character API limit.
+  // Reject an exceptional image rather than silently destroy its detail.
+  if (bestBytes > 1200 * 1024) throw new Error('Billedet er for stort til sikker upload. Tag et tættere billede af det vigtige område.');
   return best;
 }
 
@@ -1414,7 +1434,7 @@ async function handlePhotoSelect(event) {
     const img = await loadImageFile(file);
     photos.push(compressDeliveryPhoto(img));
     selectedPhotoIndex = photos.length - 1;
-    updatePhotoUI(true);
+    updatePhotoUI(true); persistDraft();
     setStatus('cameraStatus', 'Billede tilføjet (' + photos.length + '/' + MAX_PHOTOS + ').', 'ok');
   } catch (error) { setStatus('cameraStatus', error.message, 'error'); }
   finally { photoBusy = false; $('saveBtn').disabled = false; }
@@ -1528,7 +1548,7 @@ function initSignatureCanvas() {
     ctx.strokeStyle = '#111'; ctx.lineWidth = 3 * canvas.width / canvas.getBoundingClientRect().width; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(next.x, next.y); ctx.stroke(); last = next;
   });
-  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(name => canvas.addEventListener(name, () => { isDrawing = false; }));
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(name => canvas.addEventListener(name, () => { isDrawing = false; persistDraft(); }));
   signaturePadReady = true;
 }
 function clearSignature() {
@@ -1572,6 +1592,7 @@ async function updatePendingBanner() {
       return;
     }
     banner.classList.remove('sent', 'hidden');
+    if (PREVIEW) { banner.textContent = n + ' testlevering' + (n === 1 ? '' : 'er') + ' gemt lokalt · sendes ikke'; return; }
     const amount = n + ' levering' + (n === 1 ? '' : 'er');
     if (uploadInProgress) {
       banner.textContent = 'Sender ' + amount + '… Venter på bekræftelse fra serveren';
@@ -1601,6 +1622,7 @@ function scheduleQueueRetry() {
   retryDelay = Math.min(120000, retryDelay * 2);
 }
 function processPendingQueue() {
+  if (PREVIEW) return Promise.resolve();
   // Et nyt online-event eller tryk på banneret starter aldrig en parallel upload.
   if (queuePromise) return queuePromise;
   queuePromise = (async () => {
@@ -1658,7 +1680,7 @@ function retryPendingDeliveries() {
   processPendingQueue();
 }
 function makeDeliveryPayload() {
-  return { id:activeDeliveryId, orderNo:stopOrders[0], allOrders:[...stopOrders], driver:driverSelect.value,
+  return { id:activeDeliveryId, orderNo:stopOrders[0], allOrders:[...stopOrders], driver:activeDriver || driverSelect.value,
     photos:[...photos], signature:hasSignature ? $('signatureCanvas').toDataURL('image/png') : '',
     recipientName:$('receiverNameInput').value.trim(), createdAt:deliveryCreatedAt };
 }
@@ -1668,18 +1690,21 @@ async function goToRegistered() {
   isSaving = true; $('saveBtn').disabled = true; $('saveOverlay').classList.add('active');
   try {
     const payload = makeDeliveryPayload();
+    await draftWrites;
     await addPendingDelivery(payload); // The transaction must commit before showing success.
+    try { await draftStore('readwrite', store => store.delete('current')); } catch (_) { /* Recovery ignores a draft already present in the pending queue. */ }
     lastSavedId = payload.id; resetAppState();
     document.querySelector('.registered').textContent = 'Gemt på telefonen';
     $('registeredDetail').textContent = navigator.onLine
       ? 'Leveringen er gemt på telefonen. Den sendes nu; du kan fortsætte.'
       : 'Billeder og kvittering er gemt på telefonen. Leveringen sendes automatisk, når forbindelsen er tilbage, mens appen er åben.';
+    if (PREVIEW) { document.querySelector('.registered').textContent = 'Testlevering gemt'; $('registeredDetail').textContent = 'Kun gemt i denne forhåndsvisning. Intet er sendt til Wallmanns ark eller Drev.'; }
     showScreen('screen-registered'); await updatePendingBanner(); processPendingQueue();
   } catch (_) { setStatus('cameraStatus', 'Kunne ikke gemme på telefonen. Leveringen er stadig her — prøv igen.', 'error'); }
   finally { isSaving = false; $('saveBtn').disabled = false; $('saveOverlay').classList.remove('active'); updateHomeButtons(); }
 }
 function resetAppState() {
-  cancelScan(); closeScanner(); closePhotoModal(); activeDeliveryId = ''; deliveryCreatedAt = ''; stopOrders = []; photos = []; selectedPhotoIndex = -1;
+  cancelScan(); closeScanner(); closePhotoModal(); activeDeliveryId = ''; activeDriver = ''; draftMessage(''); deliveryCreatedAt = ''; stopOrders = []; photos = []; selectedPhotoIndex = -1;
   $('manualOrderInput').value = ''; clearReceiptData(); dismissCandidates(); renderOrderLists(); updatePhotoUI();
   setStatus('orderStatus', ''); setStatus('cameraStatus', ''); updateHomeButtons();
 }
@@ -1704,10 +1729,14 @@ window.addEventListener('resize', () => { if ($('screen-signature').classList.co
 window.addEventListener('online', retryPendingDeliveries);
 window.addEventListener('pagehide', closeScanner);
 document.addEventListener('visibilitychange', () => { if (document.hidden) closeScanner(); else processPendingQueue(); });
-window.addEventListener('beforeunload', e => { if (hasDraft()) { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('beforeunload', e => { if (hasDraft() && (draftPending || draftFailure || photoBusy)) { e.preventDefault(); e.returnValue = ''; } });
 window.addEventListener('load', async () => {
-  $('appVersionText').textContent = APP_VERSION; updateHomeButtons(); await updatePendingBanner(); processPendingQueue();
-  if (!('serviceWorker' in navigator)) return;
+  $('appVersionText').textContent = APP_VERSION;
+  $('previewRibbon').hidden = !PREVIEW;
+  document.body.classList.add('at-home');
+  await restoreDraft();
+  updateHomeButtons(); await updatePendingBanner(); processPendingQueue();
+  if (PREVIEW || !('serviceWorker' in navigator)) return;
   try {
     const registration = await navigator.serviceWorker.register('./service-worker.js');
     if (registration.waiting) { waitingWorker = registration.waiting; showUpdateBanner(); }
@@ -1720,5 +1749,8 @@ window.addEventListener('load', async () => {
 });
 
   </script>
+<script src="drafts.js"></script>
+<script src="directory-demo.js"></script>
+<script src="home-data.js"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
-const CACHE_NAME = 'leveringsapp-v220';
-const APP_SHELL = ['./', './index.html', './manifest.json', './wallmann-logo.png', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
+const CACHE_NAME = 'leveringsapp-v300';
+const APP_SHELL = ['./', './index.html', './design.css', './drafts.js', './config.js', './home-data.js', './directory-demo.js', './manifest.json', './wallmann-logo.png', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(async cache => {
     // Fetch fresh files: do not fill a new cache with a stale HTTP-cached index.
