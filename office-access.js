@@ -1,0 +1,15 @@
+'use strict';
+window.OfficeAccess=(()=>{
+ const KEY='wallmann.delivery.office.auth.v1',PENDING='wallmann.delivery.office.pending.v1';let auth=null,ready=false;
+ const read=k=>{try{return JSON.parse(localStorage.getItem(k)||'null');}catch(e){return null;}};
+ function secret(){const bytes=crypto.getRandomValues(new Uint8Array(32));return [...bytes].map(n=>n.toString(16).padStart(2,'0')).join('');}
+ async function request(payload){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),60000);try{const r=await fetch(window.OFFICE_CONFIG.endpoint,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload),signal:controller.signal,credentials:'omit',cache:'no-store'});if(!r.ok)throw Error('Forbindelsen fejlede. Prøv igen.');const result=await r.json();if(!result.ok){const e=Error(result.error||'Kunne ikke hente oplysninger.');e.code=result.code;throw e;}return result.data;}finally{clearTimeout(timer);}}
+ function hideApp(message){ready=false;document.querySelector('main').hidden=true;document.getElementById('accessGate').hidden=false;document.getElementById('accessMessage').textContent=message;}
+ async function init(){const main=document.querySelector('main');main.hidden=true;const gate=document.createElement('section');gate.id='accessGate';gate.style='max-width:600px;margin:60px auto;padding:28px;background:white;border-radius:16px';gate.innerHTML='<h1 style="font-size:28px">Kontoradgang</h1><p id="accessMessage" role="status">Kontrollerer adgang…</p><button class="button" id="accessRetry">Prøv igen</button>';main.before(gate);document.getElementById('accessRetry').onclick=()=>location.reload();
+ try{const hash=location.hash;if(hash){const m=/^#activate=([a-f0-9-]{36})\.([a-f0-9]{64})$/i.exec(hash);if(!m)throw Error('Aktiveringslinket er ugyldigt.');const previous=read(PENDING),pending=previous&&previous.id===m[1]&&previous.token===m[2]?previous:{id:m[1],token:m[2],secret:secret()};localStorage.setItem(PENDING,JSON.stringify(pending));history.replaceState(null,'',location.pathname+location.search);}
+ const pending=read(PENDING);if(pending){await request({action:'activate',data:pending});auth={id:pending.id,secret:pending.secret};localStorage.setItem(KEY,JSON.stringify(auth));localStorage.removeItem(PENDING);}else auth=read(KEY);
+ if(!auth)throw Error('Åbn dit personlige aktiveringslink fra administratoren på denne PC.');const user=await request({action:'hello',auth});ready=true;gate.hidden=true;main.hidden=false;const label=document.getElementById('officeDeviceName');if(label)label.textContent=user.name;
+ }catch(e){hideApp(e.name==='AbortError'?'Forbindelsen tog for lang tid. Prøv igen.':e.message);}}
+ async function rpc(action,...args){if(!ready)throw Error('Aktivér kontoradgangen først.');try{return await request({action,args,auth});}catch(e){if(e.code==='AUTH'){document.querySelectorAll('dialog[open]').forEach(d=>d.close());hideApp(e.message);}throw e;}}
+ return {init,rpc};})();
+window.addEventListener('DOMContentLoaded',()=>window.OfficeAccess.init());
