@@ -13,3 +13,5 @@ window.OfficeAccess=(()=>{
  async function rpc(action,...args){if(!ready)throw Error('Aktivér kontoradgangen først.');try{return await request({action,args,auth});}catch(e){if(e.code==='AUTH'){document.querySelectorAll('dialog[open]').forEach(d=>d.close());hideApp(e.message);}throw e;}}
  return {init,rpc};})();
 window.addEventListener('DOMContentLoaded',()=>window.OfficeAccess.init());
+
+window.addEventListener('hashchange',()=>{if(location.hash.startsWith('#activate='))location.reload();});
