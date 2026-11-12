@@ -4,6 +4,7 @@ let homeData = null, homeRequest = null, lastHomeAttempt = 0, pendingDirectory =
 function homeMonth() { const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Copenhagen',year:'numeric',month:'2-digit'}).formatToParts(new Date());return parts.find(p=>p.type==='year').value+'-'+parts.find(p=>p.type==='month').value; }
 function validDirectory(items) { return Array.isArray(items) && items.length<=200 && items.every(d=>d && typeof d.name==='string' && d.name.trim() && d.name.length<=120 && typeof d.id==='string'); }
 function applyDriverDirectory(items) {
+  if(window.DriverAccess?.identity())return;
   if(!validDirectory(items))return;
   if(hasDraft() || isSaving || photoBusy || scanBusy || document.activeElement===driverSelect) {pendingDirectory=items;return;}
   let selected=driverSelect.value;try{selected=selected||localStorage.getItem('leveringsapp_driver')||'';}catch(_){}

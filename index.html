@@ -932,6 +932,7 @@
 
   </style>
 <link rel="stylesheet" href="design.css">
+<link rel="stylesheet" href="access.css">
 <script src="config.js"></script>
 </head>
 <body class="at-home">
@@ -950,6 +951,7 @@
         <div class="home-logo-subtitle">LeveringsApp</div>
       </div>
 
+      <div id="driverIdentity" class="driver-identity" hidden></div><p id="accessStatus" class="access-status" role="status"></p>
       <select id="driverSelect" class="dropdown" required>
         <option value="" selected disabled hidden>Vælg chauffør</option>
         <option>Brian</option>
@@ -971,6 +973,7 @@
 
       <button id="newDeliveryBtn" class="btn primary" onclick="startDelivery()" disabled>Ny levering</button>
       <button id="discardBtn" class="text-button hidden" onclick="discardDelivery()">Kassér kladde</button>
+      <button id="activateAccess" class="text-button" type="button">Aktivér privatadgang</button>
       <div id="driverDirectoryNote" class="directory-note" role="status"></div>
       <div class="delivery-totals" aria-label="Leveringer for alle chauffører"><div><strong id="monthTotal">—</strong><span>Denne måned</span></div><div><strong id="yearTotal">—</strong><span>I år</span></div></div><div class="totals-note" id="monthNote">Leveringer · alle chauffører</div>
       
@@ -1142,7 +1145,7 @@
 'use strict';
 const PREVIEW = window.APP_CONFIG.preview !== false;
 const API_URL = PREVIEW ? '' : window.APP_CONFIG.apiUrl;
-const APP_VERSION = PREVIEW ? '3.0.7 · forhåndsvisning' : '3.0.7';
+const APP_VERSION = PREVIEW ? '3.0.8 · forhåndsvisning' : '3.0.8';
 const MAX_PHOTOS = 10;
 const MAX_ORDERS = 20;
 // Keep the existing database and store: v1.21 pending deliveries remain available.
@@ -1171,7 +1174,7 @@ function showScreen(id) {
 }
 function hasDraft() { return !!activeDeliveryId; }
 function updateHomeButtons() {
-  $('newDeliveryBtn').disabled = !draftReady || !driverSelect.value || isSaving;
+  $('newDeliveryBtn').disabled = (window.DriverAccess&&!DriverAccess.canUse()) || !draftReady || !driverSelect.value || isSaving;
   driverSelect.disabled = !draftReady || hasDraft();
   $('newDeliveryBtn').textContent = hasDraft() ? 'Fortsæt levering' : 'Ny levering';
   $('discardBtn').classList.toggle('hidden', !hasDraft());
@@ -1181,7 +1184,7 @@ function makeId() {
   return 'delivery_' + (globalThis.crypto?.randomUUID ? crypto.randomUUID() : Date.now() + '_' + Math.random().toString(36).slice(2, 12));
 }
 function startDelivery() {
-  if (!draftReady || !driverSelect.value || isSaving) return;
+  if ((window.DriverAccess&&!DriverAccess.canUse()) || !draftReady || !driverSelect.value || isSaving) return;
   if (!activeDeliveryId) { activeDeliveryId = makeId(); activeDriver = driverSelect.value; deliveryCreatedAt = new Date().toISOString(); }
   goToOrder();
 }
@@ -1252,12 +1255,12 @@ async function apiPost(action, payload = {}, timeoutMs = 30000, externalSignal) 
   try {
     const response = await fetch(API_URL, {
       method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' },
-      body:JSON.stringify({ action, ...payload }), signal:controller.signal, redirect:'follow'
+      body:JSON.stringify({ action, ...payload, access:window.DriverAccess?.credentials() }), signal:controller.signal, redirect:'follow'
     });
     if (!response.ok) throw new Error('Serveren svarede med HTTP ' + response.status);
     let json;
     try { json = await response.json(); } catch (_) { throw new Error('Ugyldigt serversvar. Kontroller Apps Script-implementeringen.'); }
-    if (!json.ok) throw new Error(json.error || 'Serveren kunne ikke behandle forespørgslen.');
+    if (!json.ok) { const error=new Error(json.error || 'Serveren kunne ikke behandle forespørgslen.'); error.accessBlocked=json.accessBlocked===true;if(error.accessBlocked)window.DriverAccess?.denied(error.message);throw error; }
     return json.data;
   } finally { clearTimeout(timer); externalSignal?.removeEventListener('abort', abort); }
 }
@@ -1632,7 +1635,7 @@ function scheduleQueueRetry() {
   retryDelay = Math.min(120000, retryDelay * 2);
 }
 function processPendingQueue() {
-  if (PREVIEW) return Promise.resolve();
+  if (PREVIEW || window.DriverAccess?.busy()) return Promise.resolve();
   // Et nyt online-event eller tryk på banneret starter aldrig en parallel upload.
   if (queuePromise) return queuePromise;
   queuePromise = (async () => {
@@ -1749,6 +1752,7 @@ window.addEventListener('load', async () => {
   $('previewRibbon').hidden = !PREVIEW;
   document.body.classList.add('at-home');
   await restoreDraft();
+  DriverAccess.init();
   updateHomeButtons(); await updatePendingBanner(); processPendingQueue();
   if (PREVIEW || !('serviceWorker' in navigator)) return;
   try {
@@ -1765,6 +1769,8 @@ window.addEventListener('load', async () => {
   </script>
 <script src="drafts.js"></script>
 <script src="directory-demo.js"></script>
+<script src="jsQR.js"></script>
+<script src="access.js"></script>
 <script src="home-data.js"></script>
 </body>
 </html>
