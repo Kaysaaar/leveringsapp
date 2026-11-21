@@ -18,7 +18,8 @@ function drainImageRequests() {
   }
 }
 function downloadUrl(dataUrl) {
-  const parts=dataUrl.split(','); const mime=parts[0].match(/^data:([^;]+);base64$/)[1];
+  const parts=dataUrl.split(','); const mime=(parts[0].match(/^data:(image\/(?:png|jpeg|webp));base64$/)||[])[1];
+  if(!mime) throw new Error('Billedformatet understøttes ikke.');
   const bytes=Uint8Array.from(atob(parts[1]),c=>c.charCodeAt(0));
   const url=URL.createObjectURL(new Blob([bytes],{type:mime})); downloadUrls.add(url); return url;
 }
@@ -176,9 +177,8 @@ function mediaTile(item, delivery, order, generation, galleryEntries, selection 
     try {
       const data=await queueImageRequest(generation,()=>rpc('getDeliveryImage',order,delivery.row,item.column,item.fileIndex || 0));
       if(generation!==searchGeneration)return;
-      if(!/^data:image\/(png|jpeg|webp|svg\+xml);base64,/.test(data.dataUrl))throw new Error('Billedformatet understøttes ikke.');
-      // SVG is used only by our local fixtures; live backend never returns SVG.
-      if(!DEMO && data.dataUrl.startsWith('data:image/svg'))throw new Error('Billedformatet understøttes ikke.');
+      // Kun rasterbilleder. SVG kan indeholde scripts og er derfor aldrig tilladt.
+      if(!/^data:image\/(png|jpeg|webp);base64,/.test(data.dataUrl))throw new Error('Billedformatet understøttes ikke.');
       const img=el('img');img.alt=item.label+' · levering '+delivery.orders.join(', ');img.src=data.dataUrl;
       img.onerror=()=>{open.replaceChildren(el('span','media-note','Billedet kunne ikke vises'));};
       open.replaceChildren(img);open.disabled=false;
