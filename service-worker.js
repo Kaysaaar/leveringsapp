@@ -1,4 +1,4 @@
-const CACHE_NAME = 'leveringsapp-v309';
+const CACHE_NAME = 'leveringsapp-v310';
 const APP_SHELL = ['./', './index.html', './app.js', './installed.js', './design.css', './drafts.js', './access.js', './access.css', './jsQR.js', './config.js', './home-data.js', './directory-demo.js', './manifest.json', './wallmann-logo.png', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(async cache => {

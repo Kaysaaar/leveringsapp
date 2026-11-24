@@ -589,6 +589,7 @@
       transition:transform .12s ease;
     }
 
+    .pending-banner.rejected { background:rgba(255, 150, 135, .16); border-color:rgba(255, 170, 155, .75); }
     .pending-banner.sent { background:rgba(170, 240, 195, .18); border-color:rgba(170, 240, 195, .55); cursor:default; }
 
     .pending-banner:active{
@@ -961,7 +962,7 @@
         <option>Thomas O</option>
       </select>
 
-      <div id="pendingBanner" class="pending-banner hidden" data-click="retryPendingDeliveries">
+      <div id="pendingBanner" class="pending-banner hidden" data-click="retryFromBanner">
         0 levering(er) afventer sending
       </div>
 

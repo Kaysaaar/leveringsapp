@@ -1,7 +1,7 @@
 'use strict';
 const PREVIEW = window.APP_CONFIG.preview !== false;
 const API_URL = PREVIEW ? '' : window.APP_CONFIG.apiUrl;
-const APP_VERSION = PREVIEW ? '3.0.9 · forhåndsvisning' : '3.0.9';
+const APP_VERSION = PREVIEW ? '3.1.0 · forhåndsvisning' : '3.1.0';
 const MAX_PHOTOS = 10;
 const MAX_ORDERS = 20;
 // Keep the existing database and store: v1.21 pending deliveries remain available.
@@ -116,7 +116,7 @@ async function apiPost(action, payload = {}, timeoutMs = 30000, externalSignal) 
     if (!response.ok) throw new Error('Serveren svarede med HTTP ' + response.status);
     let json;
     try { json = await response.json(); } catch (_) { throw new Error('Ugyldigt serversvar. Kontroller Apps Script-implementeringen.'); }
-    if (!json.ok) { const error=new Error(json.error || 'Serveren kunne ikke behandle forespørgslen.'); error.accessBlocked=json.accessBlocked===true;if(error.accessBlocked)window.DriverAccess?.denied(error.message);throw error; }
+    if (!json.ok) { const error=new Error(json.error || 'Serveren kunne ikke behandle forespørgslen.'); error.accessBlocked=json.accessBlocked===true; error.permanent=json.permanent===true;if(error.accessBlocked)window.DriverAccess?.denied(error.message);throw error; }
     return json.data;
   } finally { clearTimeout(timer); externalSignal?.removeEventListener('abort', abort); }
 }
@@ -463,8 +463,12 @@ async function updatePendingBanner() {
     banner.classList.remove('sent', 'hidden');
     if (PREVIEW) { banner.textContent = n + ' testlevering' + (n === 1 ? '' : 'er') + ' gemt lokalt · sendes ikke'; return; }
     const amount = n + ' levering' + (n === 1 ? '' : 'er');
+    const rejected = items.filter(x => x.rejected);
+    banner.classList.toggle('rejected', !uploadInProgress && rejected.length > 0);
     if (uploadInProgress) {
       banner.textContent = 'Sender ' + amount + '… Hold appen åben.';
+    } else if (rejected.length) {
+      banner.textContent = (rejected.length === 1 ? '1 levering' : rejected.length + ' leveringer') + ' blev afvist: ' + rejected[0].rejected.message + ' Tryk her for at prøve igen.';
     } else if (!navigator.onLine) {
       banner.textContent = amount + ' på telefonen. Sendes, når der er forbindelse. Hold appen åben.';
     } else if (lastUploadIssue) {
@@ -500,6 +504,7 @@ function processPendingQueue() {
     items.sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
     for (const item of items) {
       if (!navigator.onLine) break;
+      if (item.rejected) continue; // Afvist af serveren: venter på, at chaufføren trykker for at prøve igen.
       const started = performance.now();
       uploadInProgress = true;
       showUpdateBanner();
@@ -519,6 +524,17 @@ function processPendingQueue() {
         }
       } catch (error) {
         const ms = Math.round(performance.now() - started);
+        if (error?.permanent || error?.accessBlocked) {
+          // Serveren har afvist leveringen. Den bliver på telefonen, men prøves først igen ved tryk.
+          try { await addPendingDelivery({ ...item, rejected:{ message:String(error.message || 'Leveringen blev afvist.').slice(0, 200), at:new Date().toISOString() } }); } catch (_) {}
+          lastUploadIssue = 'afvist';
+          console.warn('Upload afvist af serveren', { ms });
+          if (lastSavedId === item.id) {
+            document.querySelector('.registered').textContent = 'Leveringen blev afvist';
+            $('registeredDetail').textContent = 'Leveringen er gemt på telefonen, men serveren afviste den: ' + String(error.message || '') + ' Tryk på den røde besked for at prøve igen, eller kontakt kontoret.';
+          }
+          continue;
+        }
         lastUploadIssue = error?.name === 'AbortError' || ms >= 89500 ? 'timeout' : 'netværk/server';
         console.warn('Upload afventer genforsøg', { ms, type:lastUploadIssue });
         if (lastSavedId === item.id) {
@@ -541,9 +557,15 @@ function processPendingQueue() {
     queuePromise = null;
     await updatePendingBanner();
     // En ny levering kan være tilføjet, mens en ældre blev uploadet.
-    try { if ((await getAllPendingDeliveries()).length && navigator.onLine) scheduleQueueRetry(); } catch (_) {}
+    try { if ((await getAllPendingDeliveries()).some(x => !x.rejected) && navigator.onLine) scheduleQueueRetry(); } catch (_) {}
   });
   return queuePromise;
+}
+// Tryk på banneret: nulstil serverafvisninger og prøv alle leveringer igen.
+async function retryFromBanner() {
+  if (uploadInProgress || queuePromise) return;
+  try { for (const item of await getAllPendingDeliveries()) { if (item.rejected) { const { rejected, ...rest } = item; await addPendingDelivery(rest); } } } catch (_) {}
+  retryPendingDeliveries();
 }
 function retryPendingDeliveries() {
   if (uploadInProgress || queuePromise) return;
@@ -563,6 +585,8 @@ async function goToRegistered() {
   isSaving = true; $('saveBtn').disabled = true; $('saveOverlay').classList.add('active');
   try {
     const payload = makeDeliveryPayload();
+    // 2026-11-24: leveringsdatoen er tidspunktet for Gem; starttidspunktet bevares separat.
+    payload.startedAt = payload.createdAt; payload.createdAt = new Date().toISOString();
     await draftWrites;
     await addPendingDelivery(payload); // The transaction must commit before showing success.
     try { await draftStore('readwrite', store => store.delete('current')); } catch (_) { /* Recovery ignores a draft already present in the pending queue. */ }
